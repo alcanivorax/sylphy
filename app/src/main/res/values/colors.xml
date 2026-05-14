@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Sylphy — res/values/colors.xml
+
+    Agent notes:
+      - This file exists ONLY to provide color references for the XML theme (splash screen,
+        system bar tinting via themes.xml). All Compose-layer colors live in ui/theme/Color.kt.
+      - Do NOT add any color here that is not referenced by themes.xml or the manifest.
+      - The design system is strictly two values: #0A0A0A (near-black) and #FAFAFA (near-white).
+        #0A0A0A is used here because the system needs a concrete XML color for window background
+        before Compose renders. #FAFAFA is used for the status bar icon tint hint.
+      - Never add red, purple, teal, or any chromatic color to this file.
+        The default Material purple values from the project template have been intentionally removed.
+-->
+<resources>
+    <!-- Primary background — near-black, not pure black (#000000).
+         Used by Theme.Sylphy as windowBackground and navigationBarColor. -->
+    <color name="bg_base">#0A0A0A</color>
+
+    <!-- Near-white — used for the splash screen icon tint and any XML-layer foreground reference. -->
+    <color name="fg_primary">#FAFAFA</color>
+</resources>

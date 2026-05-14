@@ -1,0 +1,26 @@
+package io.sylphy.app.data.model
+
+data class Track(
+    val id: String,
+    val contentUri: String,
+    val title: String,
+    val artist: String,
+    val album: String,
+    val albumArtist: String? = null,
+    val genre: String? = null,
+    val year: Int? = null,
+    val trackNumber: Int? = null,
+    val discNumber: Int? = null,
+    val durationMs: Long,
+    val fileSize: Long? = null,
+    val mimeType: String? = null,
+    val sampleRate: Int? = null,
+    val bitRate: Int? = null,
+    val artworkPath: String? = null,
+    val waveformData: List<Float>? = null,
+    val playCount: Int = 0,
+    val lastPlayedAt: Long? = null,
+    val addedAt: Long,
+    val isAvailable: Boolean = true,
+    val isFavorite: Boolean = false,
+)

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Sylphy — AndroidManifest.xml
+    Agent notes:
+      - READ_MEDIA_AUDIO targets API 33+; READ_EXTERNAL_STORAGE covers API 26-32.
+      - FOREGROUND_SERVICE_MEDIA_PLAYBACK is required from API 34+ for media playback services.
+      - SylphyPlaybackService must be declared with foregroundServiceType="mediaPlayback"
+        so the OS allows it to stay alive during background playback and show the media notification.
+      - android:exported="true" on the service is required so MediaController (from another
+        process or the lock screen) can bind to it.
+      - windowSoftInputMode="adjustResize" keeps the UI above the software keyboard.
+      - screenOrientation="portrait" — music players rarely benefit from landscape.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ── Storage / Media permissions ──────────────────────────────────────── -->
+    <!-- API 33+ (Android 13): granular media permission -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <!-- API 26–32 (Android 8–12): legacy external storage read -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- ── Foreground service permissions ───────────────────────────────────── -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Required on API 34+ to declare a foreground service with mediaPlayback type -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <!-- ── Playback quality permissions ─────────────────────────────────────── -->
+    <!-- WAKE_LOCK keeps audio alive when screen turns off -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- VIBRATE used for haptic feedback on play/pause button presses -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:name=".SylphyApplication"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_sylphy"
+        android:roundIcon="@mipmap/ic_sylphy_round"
+        android:label="Sylphy"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Sylphy">
+
+        <!-- ── Main Activity ─────────────────────────────────────────────── -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- ── Media3 Playback Service ───────────────────────────────────── -->
+        <!--
+            Agent notes:
+              - foregroundServiceType="mediaPlayback" is mandatory for API 34+ background audio.
+              - Both intent-filter actions are needed: the Media3 action enables MediaController
+                binding, the legacy MediaBrowserService action enables Android Auto / Bluetooth.
+              - This service is managed by Hilt (@AndroidEntryPoint) and receives ExoPlayer
+                via field injection. It should NOT be started manually — MediaController
+                connects to it automatically when SylphyApplication initialises.
+        -->
+        <service
+            android:name=".service.SylphyPlaybackService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+
+    </application>
+
+</manifest>

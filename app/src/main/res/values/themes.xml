@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Sylphy — res/values/themes.xml
+
+    Agent notes:
+      - This file is intentionally minimal. Its only job is to configure the
+        system window (splash screen, status bar, navigation bar) before Compose
+        renders its first frame. All visual design after that point is handled
+        by SylphyTheme.kt in the Compose layer.
+
+      - The parent "android:Theme.Material.NoTitleBar" gives us a dark,
+        no-action-bar base without pulling in AppCompat or Material Components
+        XML theming that would conflict with Compose's Material 3 setup.
+
+      - windowLightStatusBar = false  → white status-bar icons (correct on #0A0A0A bg).
+      - windowLightNavigationBar = false → white nav-bar icons on the same bg.
+
+      - Do NOT add colorPrimary, colorAccent, or any chromatic value here.
+        The design system is strictly monochrome; any color added in XML will
+        bleed into pre-Compose system UI surfaces.
+
+      - The splash screen (core-splashscreen library) reads windowBackground and
+        the splashScreenTheme attribute. Both point to the same bg_base so the
+        transition from splash to Compose content is seamless (no flash).
+-->
+<resources>
+
+    <!--
+        Base application theme.
+        Applied via android:theme="@style/Theme.Sylphy" in the manifest.
+        All activities inherit this unless they override it.
+    -->
+    <style name="Theme.Sylphy" parent="android:Theme.Material.Light.NoActionBar">
+
+        <!-- Window background shown before Compose draws its first frame.
+             Must match BgBase in Color.kt (#0A0A0A) exactly. -->
+        <item name="android:windowBackground">@color/bg_base</item>
+
+        <!-- Status bar: same near-black as the app background. -->
+        <item name="android:statusBarColor">@color/bg_base</item>
+
+        <!-- Navigation bar: same near-black. -->
+        <item name="android:navigationBarColor">@color/bg_base</item>
+
+        <!-- Force white (light) icons on the dark status bar.
+             false = light icons on dark background — do not change. -->
+        <item name="android:windowLightStatusBar">false</item>
+
+        <!-- Force white (light) icons on the dark navigation bar. -->
+        <item name="android:windowLightNavigationBar">false</item>
+
+        <!-- Remove the title bar entirely — Compose owns the full surface. -->
+        <item name="android:windowNoTitle">true</item>
+
+        <!-- Allow Compose's WindowInsets handling (via enableEdgeToEdge()) to
+             control padding rather than the system inset decorations. -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+
+    </style>
+
+    <!--
+        Splash screen theme.
+        The core-splashscreen library looks for this style name by convention.
+        It is applied briefly during cold start before MainActivity inflates.
+        Parent must extend the base app theme so window chrome stays consistent.
+    -->
+    <style name="Theme.Sylphy.Splash" parent="Theme.Sylphy">
+        <!-- Splash screen icon background. Same as window background — no flash. -->
+        <item name="android:windowBackground">@color/bg_base</item>
+    </style>
+
+</resources>
