@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Update
 import io.sylphy.app.data.local.db.entity.PlaylistEntity
 import io.sylphy.app.data.local.db.entity.PlaylistTrackEntity
+import io.sylphy.app.data.local.db.entity.TrackEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -17,6 +18,9 @@ interface PlaylistDao {
 
     @Query("SELECT * FROM playlists WHERE id = :id")
     suspend fun getPlaylistById(id: String): PlaylistEntity?
+
+    @Query("SELECT * FROM playlists WHERE id = :id")
+    fun observePlaylistById(id: String): Flow<PlaylistEntity?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylist(playlist: PlaylistEntity)
@@ -39,6 +43,24 @@ interface PlaylistDao {
     @Query("SELECT trackId FROM playlist_tracks WHERE playlistId = :playlistId ORDER BY position ASC")
     fun getTrackIdsForPlaylist(playlistId: String): Flow<List<String>>
 
+    @Query("""
+        SELECT tracks.* FROM tracks
+        INNER JOIN playlist_tracks ON playlist_tracks.trackId = tracks.id
+        WHERE playlist_tracks.playlistId = :playlistId
+        ORDER BY playlist_tracks.position ASC
+    """)
+    fun getTracksForPlaylist(playlistId: String): Flow<List<TrackEntity>>
+
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM playlist_tracks WHERE playlistId = :playlistId")
+    suspend fun nextPosition(playlistId: String): Int
+
     @Query("UPDATE playlists SET trackCount = :count, durationMs = :durationMs, updatedAt = :updatedAt WHERE id = :id")
     suspend fun updateStats(id: String, count: Int, durationMs: Long, updatedAt: Long)
+
+    @Query("""
+        UPDATE playlist_tracks
+        SET position = :position
+        WHERE playlistId = :playlistId AND trackId = :trackId
+    """)
+    suspend fun updateTrackPosition(playlistId: String, trackId: String, position: Int)
 }

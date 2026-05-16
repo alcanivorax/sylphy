@@ -16,8 +16,14 @@ interface AlbumDao {
     @Query("SELECT * FROM albums WHERE id = :id")
     suspend fun getAlbumById(id: String): AlbumEntity?
 
+    @Query("SELECT * FROM albums WHERE id = :id")
+    fun observeAlbumById(id: String): Flow<AlbumEntity?>
+
     @Query("SELECT * FROM albums WHERE artist = :artist ORDER BY year DESC")
     fun getAlbumsByArtist(artist: String): Flow<List<AlbumEntity>>
+
+    @Query("SELECT * FROM albums WHERE title LIKE '%' || :query || '%' OR artist LIKE '%' || :query || '%' ORDER BY title ASC LIMIT 20")
+    suspend fun searchAlbums(query: String): List<AlbumEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAlbums(albums: List<AlbumEntity>)

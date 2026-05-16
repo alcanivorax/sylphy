@@ -3,45 +3,106 @@ package io.sylphy.app.ui.screens.library
 import android.Manifest
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import io.sylphy.app.core.util.toHhMm
+import io.sylphy.app.core.util.toMmSs
+import io.sylphy.app.core.util.toTrackCountLabel
 import io.sylphy.app.data.local.scanner.ScanProgress
+import io.sylphy.app.data.model.Album
+import io.sylphy.app.data.model.Artist
+import io.sylphy.app.data.model.Playlist
+import io.sylphy.app.data.model.Track
+import io.sylphy.app.ui.components.player.AlbumArtwork
 import io.sylphy.app.ui.components.shared.ButtonVariant
+import io.sylphy.app.ui.components.shared.ContextMenuAction
+import io.sylphy.app.ui.components.shared.ContextMenuSheet
 import io.sylphy.app.ui.components.shared.SylphyButton
 import io.sylphy.app.ui.components.shared.SylphyDivider
+import io.sylphy.app.ui.components.shared.SylphySearchBar
+import io.sylphy.app.ui.navigation.Screen
 import io.sylphy.app.ui.theme.BgBase
+import io.sylphy.app.ui.theme.BgElevated
+import io.sylphy.app.ui.theme.BgSunken
+import io.sylphy.app.ui.theme.BorderDefault
+import io.sylphy.app.ui.theme.ContainerCorner
+import io.sylphy.app.ui.theme.Duration
+import io.sylphy.app.ui.theme.FgGhost
 import io.sylphy.app.ui.theme.FgMuted
 import io.sylphy.app.ui.theme.FgPrimary
 import io.sylphy.app.ui.theme.FgSubtle
+import io.sylphy.app.ui.theme.Layout
 import io.sylphy.app.ui.theme.Spacing
+import io.sylphy.app.ui.theme.SylphyEasing
 import io.sylphy.app.ui.theme.SylphyType
+import kotlin.math.roundToInt
 
-@OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun LibraryScreen(
     navController: NavController,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var contextMenuTrack by remember { mutableStateOf<Track?>(null) }
+    var playlistTarget by remember { mutableStateOf<Track?>(null) }
+    var showCreatePlaylist by remember { mutableStateOf(false) }
 
     val permission = rememberPermissionState(
         if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO
@@ -52,67 +113,392 @@ fun LibraryScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BgBase)
-            .padding(Spacing.lg),
+            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
     ) {
-        SylphyButton(
-            text = if (permission.status.isGranted) "Scan Library" else "Grant Permission",
-            variant = ButtonVariant.Outline,
-            onClick = {
-                if (permission.status.isGranted) viewModel.scanLibrary()
-                else permission.launchPermissionRequest()
-            },
-        )
-
-        Spacer(Modifier.height(Spacing.md))
-
-        AnimatedVisibility(uiState.scanStatus is ScanProgress.Scanning) {
-            val progress = (uiState.scanStatus as? ScanProgress.Scanning)?.progress ?: 0f
-            val found = (uiState.scanStatus as? ScanProgress.Scanning)?.found ?: 0
-            Column {
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(Spacing.px1),
-                    color = FgPrimary,
-                    trackColor = FgSubtle,
-                )
-                Spacer(Modifier.height(Spacing.xs))
-                Text(
-                    text = "Scanning  $found  ·  ${(progress * 100).toInt()}%",
-                    style = SylphyType.CodeSmall,
-                    color = FgMuted,
-                )
-                Spacer(Modifier.height(Spacing.md))
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("LIBRARY", style = SylphyType.Heading, color = FgPrimary, modifier = Modifier.weight(1f))
+            SylphyButton(
+                text = if (permission.status.isGranted) "Scan" else "Permission",
+                variant = ButtonVariant.Outline,
+                onClick = {
+                    if (permission.status.isGranted) viewModel.scanLibrary()
+                    else permission.launchPermissionRequest()
+                },
+            )
         }
 
-        LazyColumn {
-            items(
-                items = uiState.tracks,
-                key = { it.id },
-            ) { track ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.playTrack(track, uiState.tracks) }
-                        .padding(vertical = Spacing.sm),
-                ) {
-                    Text(
-                        text = track.title,
-                        style = SylphyType.Code,
-                        color = FgPrimary,
-                        maxLines = 1,
-                    )
-                    Text(
-                        text = track.artist,
-                        style = SylphyType.BodySmall,
-                        color = FgMuted,
-                        maxLines = 1,
-                    )
-                }
-                SylphyDivider()
+        Spacer(Modifier.height(Spacing.md))
+        SylphySearchBar(
+            value = uiState.searchQuery,
+            onValueChange = viewModel::setSearchQuery,
+            placeholder = "Search songs, albums, artists",
+        )
+        ScanProgressBar(uiState.scanStatus)
+        LibrarySubTabs(uiState.selectedTab, viewModel::selectTab)
+
+        val searchResults = uiState.searchResults
+        if (searchResults != null) {
+            SearchResultsList(
+                results = searchResults,
+                onTrackClick = { viewModel.playTrack(it, searchResults.tracks) },
+                onTrackLongClick = { contextMenuTrack = it },
+                onAlbumClick = { navController.navigate(Screen.AlbumDetail.route(it.id)) },
+                onArtistClick = { navController.navigate(Screen.ArtistDetail.route(it.id)) },
+            )
+        } else {
+            when (uiState.selectedTab) {
+                LibraryTab.Songs -> SongsTab(
+                    tracks = uiState.tracks,
+                    recentlyPlayed = uiState.recentlyPlayed,
+                    onTrackClick = { viewModel.playTrack(it, uiState.tracks) },
+                    onTrackLongClick = { contextMenuTrack = it },
+                )
+                LibraryTab.Albums -> AlbumsTab(
+                    albums = uiState.albums,
+                    onAlbumClick = { navController.navigate(Screen.AlbumDetail.route(it.id)) },
+                )
+                LibraryTab.Artists -> ArtistsTab(
+                    artists = uiState.artists,
+                    onArtistClick = { navController.navigate(Screen.ArtistDetail.route(it.id)) },
+                )
+                LibraryTab.Playlists -> PlaylistsTab(
+                    playlists = uiState.playlists,
+                    onCreate = { showCreatePlaylist = true },
+                    onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.route(it.id)) },
+                )
             }
         }
     }
+
+    contextMenuTrack?.let { track ->
+        ContextMenuSheet(
+            track = track,
+            onDismiss = { contextMenuTrack = null },
+            actions = listOf(
+                ContextMenuAction("Play next", Icons.Default.PlayArrow) {
+                    viewModel.playTrack(track, listOf(track))
+                },
+                ContextMenuAction("Add to playlist", Icons.Default.PlaylistAdd) {
+                    playlistTarget = track
+                },
+                ContextMenuAction(
+                    if (track.isFavorite) "Remove favorite" else "Favorite",
+                    if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                ) {
+                    viewModel.toggleFavorite(track)
+                },
+            ),
+        )
+    }
+
+    playlistTarget?.let { track ->
+        PlaylistPickerDialog(
+            playlists = uiState.playlists,
+            onDismiss = { playlistTarget = null },
+            onCreate = {
+                playlistTarget = null
+                showCreatePlaylist = true
+            },
+            onPick = {
+                viewModel.addToPlaylist(it.id, track.id)
+                playlistTarget = null
+            },
+        )
+    }
+
+    if (showCreatePlaylist) {
+        CreatePlaylistDialog(
+            onDismiss = { showCreatePlaylist = false },
+            onCreate = {
+                viewModel.createPlaylist(it)
+                showCreatePlaylist = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun ScanProgressBar(scanStatus: ScanProgress) {
+    AnimatedVisibility(scanStatus is ScanProgress.Scanning) {
+        val scanning = scanStatus as ScanProgress.Scanning
+        Column {
+            Spacer(Modifier.height(Spacing.sm))
+            LinearProgressIndicator(
+                progress = { scanning.progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(Spacing.px1),
+                color = FgPrimary,
+                trackColor = FgSubtle,
+            )
+            Spacer(Modifier.height(Spacing.xs))
+            Text("Scanning ${scanning.found} · ${(scanning.progress * 100).toInt()}%", style = SylphyType.CodeSmall, color = FgMuted)
+        }
+    }
+}
+
+@Composable
+private fun LibrarySubTabs(selected: LibraryTab, onSelect: (LibraryTab) -> Unit) {
+    val tabs = LibraryTab.entries
+    val density = LocalDensity.current
+    val tabWidth = 88.dp
+    val underlineOffset = remember { Animatable(0f) }
+    val tabWidthPx = with(density) { tabWidth.toPx() }
+
+    LaunchedEffect(selected) {
+        underlineOffset.animateTo(
+            targetValue = selected.ordinal * tabWidthPx,
+            animationSpec = tween(Duration.Normal, easing = SylphyEasing.Standard),
+        )
+    }
+
+    Column(Modifier.padding(top = Spacing.md, bottom = Spacing.sm)) {
+        Row {
+            tabs.forEach { tab ->
+                Box(
+                    modifier = Modifier
+                        .width(tabWidth)
+                        .height(40.dp)
+                        .clickable { onSelect(tab) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(tab.name.uppercase(), style = SylphyType.CodeSmall, color = if (tab == selected) FgPrimary else FgMuted)
+                }
+            }
+        }
+        Box(Modifier.fillMaxWidth().height(2.dp)) {
+            Box(
+                Modifier
+                    .offset { IntOffset(underlineOffset.value.roundToInt(), 0) }
+                    .width(tabWidth)
+                    .height(2.dp)
+                    .background(FgPrimary),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SongsTab(
+    tracks: List<Track>,
+    recentlyPlayed: List<Track>,
+    onTrackClick: (Track) -> Unit,
+    onTrackLongClick: (Track) -> Unit,
+) {
+    val sectioned = remember(tracks) {
+        tracks.groupBy { it.title.firstOrNull()?.uppercaseChar()?.takeIf { c -> c.isLetter() }?.toString() ?: "#" }
+            .toSortedMap()
+    }
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        stickyHeader(key = "recent") {
+            if (recentlyPlayed.isNotEmpty()) {
+                RecentlyPlayedStrip(recentlyPlayed, onTrackClick)
+            }
+        }
+        sectioned.forEach { (letter, sectionTracks) ->
+            stickyHeader(key = "header_$letter") { SectionHeader(letter) }
+            items(sectionTracks, key = { it.id }) { track ->
+                TrackRow(track, onTrackClick = onTrackClick, onTrackLongClick = onTrackLongClick)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentlyPlayedStrip(tracks: List<Track>, onTrackClick: (Track) -> Unit) {
+    Column(Modifier.background(BgBase).padding(bottom = Spacing.sm)) {
+        Text("RECENT", style = SylphyType.CodeSmall, color = FgMuted, modifier = Modifier.padding(vertical = Spacing.xs))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            items(tracks, key = { it.id }) { track ->
+                Column(
+                    modifier = Modifier.width(112.dp).clickable { onTrackClick(track) },
+                ) {
+                    AlbumArtwork(track.artworkPath, size = 96.dp)
+                    Spacer(Modifier.height(Spacing.sm))
+                    Text(track.title, style = SylphyType.CodeSmall, color = FgPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(track.artist, style = SylphyType.Caption, color = FgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlbumsTab(albums: List<Album>, onAlbumClick: (Album) -> Unit) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(Layout.albumGridColumns),
+        contentPadding = PaddingValues(vertical = Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        items(albums, key = { it.id }) { album -> AlbumCard(album, onAlbumClick) }
+    }
+}
+
+@Composable
+private fun AlbumCard(album: Album, onClick: (Album) -> Unit) {
+    Column(Modifier.clickable { onClick(album) }) {
+        AlbumArtwork(album.artworkPath, modifier = Modifier.fillMaxWidth().aspectRatio(1f), size = 180.dp)
+        Spacer(Modifier.height(Spacing.sm))
+        Text(album.title, style = SylphyType.Code, color = FgPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(album.artist, style = SylphyType.BodySmall, color = FgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun ArtistsTab(artists: List<Artist>, onArtistClick: (Artist) -> Unit) {
+    LazyColumn {
+        items(artists, key = { it.id }) { artist ->
+            ListEntityRow(
+                title = artist.name,
+                subtitle = "${artist.albumCount} albums · ${artist.trackCount.toTrackCountLabel()}",
+                onClick = { onArtistClick(artist) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlaylistsTab(playlists: List<Playlist>, onCreate: () -> Unit, onPlaylistClick: (Playlist) -> Unit) {
+    LazyColumn {
+        item {
+            ListEntityRow("Create playlist", "New custom queue", onCreate, leading = Icons.Default.Add)
+        }
+        items(playlists, key = { it.id }) { playlist ->
+            ListEntityRow(
+                title = playlist.name,
+                subtitle = "${playlist.trackCount.toTrackCountLabel()} · ${playlist.durationMs.toHhMm()}",
+                onClick = { onPlaylistClick(playlist) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchResultsList(
+    results: SearchResults,
+    onTrackClick: (Track) -> Unit,
+    onTrackLongClick: (Track) -> Unit,
+    onAlbumClick: (Album) -> Unit,
+    onArtistClick: (Artist) -> Unit,
+) {
+    LazyColumn(Modifier.fillMaxSize()) {
+        item { SectionHeader("SONGS") }
+        items(results.tracks, key = { it.id }) { TrackRow(it, onTrackClick, onTrackLongClick) }
+        item { SectionHeader("ALBUMS") }
+        items(results.albums, key = { it.id }) { album ->
+            ListEntityRow(album.title, album.artist, { onAlbumClick(album) })
+        }
+        item { SectionHeader("ARTISTS") }
+        items(results.artists, key = { it.id }) { artist ->
+            ListEntityRow(artist.name, artist.trackCount.toTrackCountLabel(), { onArtistClick(artist) })
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+internal fun TrackRow(track: Track, onTrackClick: (Track) -> Unit, onTrackLongClick: (Track) -> Unit = {}) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(Layout.trackRowHeight)
+            .combinedClickable(
+                onClick = { onTrackClick(track) },
+                onLongClick = { onTrackLongClick(track) },
+            )
+            .padding(vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AlbumArtwork(track.artworkPath, size = Layout.albumArtSizeSm)
+        Spacer(Modifier.width(Spacing.md))
+        Column(Modifier.weight(1f)) {
+            Text(track.title, style = SylphyType.Code, color = FgPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(track.artist, style = SylphyType.BodySmall, color = FgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Text(track.durationMs.toMmSs(), style = SylphyType.CodeSmall, color = FgMuted)
+    }
+    SylphyDivider()
+}
+
+@Composable
+internal fun SectionHeader(title: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(Layout.sectionHeaderHeight)
+            .background(BgBase),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(title, style = SylphyType.CodeSmall, color = FgMuted)
+    }
+}
+
+@Composable
+private fun ListEntityRow(title: String, subtitle: String, onClick: () -> Unit, leading: androidx.compose.ui.graphics.vector.ImageVector? = null) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(Layout.trackRowHeight)
+            .clickable { onClick() }
+            .padding(vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(Layout.albumArtSizeSm)
+                .clip(ContainerCorner)
+                .border(Layout.borderThin, BorderDefault, ContainerCorner)
+                .background(if (leading == null) BgElevated else BgSunken),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (leading != null) Icon(leading, contentDescription = null, tint = FgPrimary)
+            else Text(title.take(1).uppercase(), style = SylphyType.Display, color = FgSubtle)
+        }
+        Spacer(Modifier.width(Spacing.md))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = SylphyType.Code, color = FgPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(subtitle, style = SylphyType.BodySmall, color = FgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+    SylphyDivider()
+}
+
+@Composable
+private fun PlaylistPickerDialog(
+    playlists: List<Playlist>,
+    onDismiss: () -> Unit,
+    onCreate: () -> Unit,
+    onPick: (Playlist) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = BgElevated,
+        title = { Text("Add to playlist", style = SylphyType.Heading, color = FgPrimary) },
+        text = {
+            Column {
+                Text("Create playlist", style = SylphyType.Body, color = FgPrimary, modifier = Modifier.fillMaxWidth().clickable(onClick = onCreate).padding(Spacing.md))
+                playlists.forEach { playlist ->
+                    Text(playlist.name, style = SylphyType.Body, color = FgPrimary, modifier = Modifier.fillMaxWidth().clickable { onPick(playlist) }.padding(Spacing.md))
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = FgPrimary) } },
+    )
+}
+
+@Composable
+private fun CreatePlaylistDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = BgElevated,
+        title = { Text("Create playlist", style = SylphyType.Heading, color = FgPrimary) },
+        text = { TextField(value = name, onValueChange = { name = it }, singleLine = true) },
+        confirmButton = { TextButton(onClick = { onCreate(name) }) { Text("Create", color = FgPrimary) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = FgPrimary) } },
+    )
 }

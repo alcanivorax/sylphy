@@ -18,6 +18,7 @@ import io.sylphy.app.data.local.db.entity.ListeningSessionEntity
 import io.sylphy.app.data.local.db.entity.PlaylistEntity
 import io.sylphy.app.data.local.db.entity.PlaylistTrackEntity
 import io.sylphy.app.data.local.db.entity.QueueSnapshotEntity
+import io.sylphy.app.data.local.db.entity.TrackFtsEntity
 import io.sylphy.app.data.local.db.entity.TrackEntity
 
 class WaveformConverter {
@@ -42,8 +43,9 @@ class WaveformConverter {
         PlaylistTrackEntity::class,
         ListeningSessionEntity::class,
         QueueSnapshotEntity::class,
+        TrackFtsEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(WaveformConverter::class)

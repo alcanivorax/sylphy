@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import io.sylphy.app.data.local.db.entity.TrackEntity
+import io.sylphy.app.data.local.db.entity.TrackFtsEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -29,14 +30,11 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE lastPlayedAt IS NOT NULL ORDER BY lastPlayedAt DESC LIMIT :limit")
     fun getRecentlyPlayed(limit: Int = 20): Flow<List<TrackEntity>>
 
-    @Query("""
-        SELECT * FROM tracks
-        WHERE title LIKE '%' || :query || '%'
-           OR artist LIKE '%' || :query || '%'
-           OR album LIKE '%' || :query || '%'
-        ORDER BY title ASC
-    """)
+    @Query("SELECT tracks.* FROM tracks JOIN tracks_fts ON tracks.id = tracks_fts.trackId WHERE tracks_fts MATCH :query ORDER BY tracks.title ASC")
     fun searchTracks(query: String): Flow<List<TrackEntity>>
+
+    @Query("SELECT * FROM tracks ORDER BY title ASC")
+    suspend fun getAllTrackEntities(): List<TrackEntity>
 
     @Query("SELECT * FROM tracks WHERE waveformJson IS NULL LIMIT :limit")
     suspend fun getTracksWithoutWaveform(limit: Int = 50): List<TrackEntity>
@@ -52,6 +50,15 @@ interface TrackDao {
 
     @Update
     suspend fun updateTrack(track: TrackEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSearchRows(rows: List<TrackFtsEntity>)
+
+    @Query("DELETE FROM tracks_fts")
+    suspend fun clearSearchIndex()
+
+    @Query("DELETE FROM tracks_fts WHERE trackId = :trackId")
+    suspend fun deleteSearchRow(trackId: String)
 
     @Query("UPDATE tracks SET waveformJson = :waveformJson WHERE id = :id")
     suspend fun updateWaveform(id: String, waveformJson: String)

@@ -2,10 +2,12 @@ package io.sylphy.app.data.repository
 
 import io.sylphy.app.core.extension.toTrack
 import io.sylphy.app.core.extension.mapList
+import io.sylphy.app.core.extension.toFtsEntity
 import io.sylphy.app.data.local.db.dao.TrackDao
 import io.sylphy.app.data.local.scanner.ArtworkExtractor
 import io.sylphy.app.data.local.scanner.LibraryOrganizer
 import io.sylphy.app.data.local.scanner.MediaScanner
+import io.sylphy.app.data.local.scanner.MetadataReader
 import io.sylphy.app.data.local.scanner.ScanProgress
 import io.sylphy.app.data.model.Track
 import io.sylphy.app.domain.repository.TrackRepository
@@ -21,6 +23,7 @@ class TrackRepositoryImpl @Inject constructor(
     private val mediaScanner: MediaScanner,
     private val artworkExtractor: ArtworkExtractor,
     private val libraryOrganizer: LibraryOrganizer,
+    private val metadataReader: MetadataReader,
 ) : TrackRepository {
 
     override fun getAllTracks(): Flow<List<Track>> =
@@ -33,7 +36,8 @@ class TrackRepositoryImpl @Inject constructor(
         trackDao.getRecentlyPlayed(limit).mapList { it.toTrack() }
 
     override fun searchTracks(query: String): Flow<List<Track>> =
-        trackDao.searchTracks(query).mapList { it.toTrack() }
+        trackDao.searchTracks(query.trim().split(Regex("\\s+")).joinToString(" ") { "$it*" })
+            .mapList { it.toTrack() }
 
     override fun getTracksByAlbum(album: String): Flow<List<Track>> =
         trackDao.getTracksByAlbum(album).mapList { it.toTrack() }
@@ -47,9 +51,12 @@ class TrackRepositoryImpl @Inject constructor(
     override fun scanLibrary(): Flow<ScanProgress> =
         mediaScanner.scan().onEach { progress ->
             if (progress is ScanProgress.Done) {
-                val entities = trackDao.getAllTracks()
-                // Trigger organizer after scan completes by collecting once
-                // LibraryOrganizer runs on the caller's coroutine scope
+                val entities = trackDao.getAllTrackEntities()
+                rebuildSearchIndex(entities)
+                metadataReader.enrichBatch(entities)
+                val enriched = trackDao.getAllTrackEntities()
+                rebuildSearchIndex(enriched)
+                libraryOrganizer.organize(enriched)
             }
         }
 
@@ -72,6 +79,14 @@ class TrackRepositoryImpl @Inject constructor(
                 trackDao.updateArtworkPath(entity.id, path)
             }
             delay(30)
+        }
+        libraryOrganizer.organize(trackDao.getAllTrackEntities())
+    }
+
+    private suspend fun rebuildSearchIndex(entities: List<io.sylphy.app.data.local.db.entity.TrackEntity>) {
+        trackDao.clearSearchIndex()
+        if (entities.isNotEmpty()) {
+            trackDao.insertSearchRows(entities.map { it.toFtsEntity() })
         }
     }
 }

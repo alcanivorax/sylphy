@@ -6,6 +6,8 @@ import io.sylphy.app.data.local.db.entity.AlbumEntity
 import io.sylphy.app.data.local.db.entity.ArtistEntity
 import io.sylphy.app.data.local.db.entity.TrackEntity
 import io.sylphy.app.core.util.sha1
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,26 +18,29 @@ class LibraryOrganizer @Inject constructor(
     private val artistDao: ArtistDao,
 ) {
 
-    suspend fun organize(tracks: List<TrackEntity>) {
-        if (tracks.isEmpty()) return
-        organizeAlbums(tracks)
-        organizeArtists(tracks)
-        Timber.d("Organized ${tracks.size} tracks into albums/artists")
+    suspend fun organize(tracks: List<TrackEntity>) = withContext(Dispatchers.IO) {
+        if (tracks.isNotEmpty()) {
+            organizeAlbums(tracks)
+            organizeArtists(tracks)
+            Timber.d("Organized ${tracks.size} tracks into albums/artists")
+        }
     }
 
     private suspend fun organizeAlbums(tracks: List<TrackEntity>) {
-        val albumMap = tracks.groupBy { it.album }
+        val albumMap = tracks.groupBy { track ->
+            "${(track.albumArtist ?: track.artist).lowercase()}::${track.album.lowercase()}"
+        }
 
-        val albums = albumMap.map { (albumTitle, albumTracks) ->
+        val albums = albumMap.map { (key, albumTracks) ->
             val first = albumTracks.first()
             AlbumEntity(
-                id          = "${albumTitle}_${first.albumArtist ?: first.artist}".sha1(),
-                title       = albumTitle,
-                artist      = first.artist,
+                id          = key.sha1(),
+                title       = first.album,
+                artist      = first.albumArtist ?: first.artist,
                 albumArtist = first.albumArtist,
-                year        = first.year,
+                year        = albumTracks.mapNotNull { it.year }.firstOrNull(),
                 genre       = first.genre,
-                artworkPath = albumTracks.firstOrNull { it.artworkPath != null }?.artworkPath,
+                artworkPath = albumTracks.firstNotNullOfOrNull { it.artworkPath },
                 trackCount  = albumTracks.size,
                 durationMs  = albumTracks.sumOf { it.durationMs },
                 addedAt     = albumTracks.minOf { it.addedAt },
@@ -49,15 +54,17 @@ class LibraryOrganizer @Inject constructor(
     }
 
     private suspend fun organizeArtists(tracks: List<TrackEntity>) {
-        val artistMap = tracks.groupBy { it.albumArtist ?: it.artist }
+        val artistMap = tracks.groupBy { (it.albumArtist ?: it.artist).lowercase() }
 
-        val artists = artistMap.map { (artistName, artistTracks) ->
+        val artists = artistMap.map { (_, artistTracks) ->
+            val artistName = artistTracks.first().albumArtist ?: artistTracks.first().artist
             val albumCount = artistTracks.map { it.album }.distinct().size
             ArtistEntity(
-                id         = artistName.sha1(),
-                name       = artistName,
-                albumCount = albumCount,
-                trackCount = artistTracks.size,
+                id          = artistName.lowercase().sha1(),
+                name        = artistName,
+                artworkPath = artistTracks.firstNotNullOfOrNull { it.artworkPath },
+                albumCount  = albumCount,
+                trackCount  = artistTracks.size,
             )
         }
 

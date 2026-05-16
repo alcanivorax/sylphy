@@ -16,6 +16,12 @@ interface ArtistDao {
     @Query("SELECT * FROM artists WHERE id = :id")
     suspend fun getArtistById(id: String): ArtistEntity?
 
+    @Query("SELECT * FROM artists WHERE id = :id")
+    fun observeArtistById(id: String): Flow<ArtistEntity?>
+
+    @Query("SELECT * FROM artists WHERE name LIKE '%' || :query || '%' ORDER BY name ASC LIMIT 20")
+    suspend fun searchArtists(query: String): List<ArtistEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertArtists(artists: List<ArtistEntity>)
 
