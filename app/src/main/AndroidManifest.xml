@@ -11,7 +11,8 @@
       - windowSoftInputMode="adjustResize" keeps the UI above the software keyboard.
       - screenOrientation="portrait" — music players rarely benefit from landscape.
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- ── Storage / Media permissions ──────────────────────────────────────── -->
     <!-- API 33+ (Android 13): granular media permission -->
@@ -72,6 +73,17 @@
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
     </application>
 

@@ -1,5 +1,10 @@
 package io.sylphy.app.data.repository
 
+import android.content.Context
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.sylphy.app.core.extension.toTrack
 import io.sylphy.app.core.extension.mapList
 import io.sylphy.app.core.extension.toFtsEntity
@@ -11,6 +16,7 @@ import io.sylphy.app.data.local.scanner.MetadataReader
 import io.sylphy.app.data.local.scanner.ScanProgress
 import io.sylphy.app.data.model.Track
 import io.sylphy.app.domain.repository.TrackRepository
+import io.sylphy.app.service.WaveformScanWorker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
@@ -19,6 +25,7 @@ import javax.inject.Singleton
 
 @Singleton
 class TrackRepositoryImpl @Inject constructor(
+    @param:ApplicationContext private val context: Context,
     private val trackDao: TrackDao,
     private val mediaScanner: MediaScanner,
     private val artworkExtractor: ArtworkExtractor,
@@ -57,6 +64,11 @@ class TrackRepositoryImpl @Inject constructor(
                 val enriched = trackDao.getAllTrackEntities()
                 rebuildSearchIndex(enriched)
                 libraryOrganizer.organize(enriched)
+                WorkManager.getInstance(context).enqueueUniqueWork(
+                    "waveform_scan",
+                    ExistingWorkPolicy.REPLACE,
+                    OneTimeWorkRequestBuilder<WaveformScanWorker>().build(),
+                )
             }
         }
 

@@ -10,6 +10,9 @@ data class PlayerUiState(
     val speed: Float = 1.0f,
     val shuffleEnabled: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.OFF,
+    val volume: Float = 1f,
+    val crossfadeDurationMs: Int = 0,
+    val sleepTimerRemainingMs: Long = 0L,
 )
 
 enum class PlaybackState { IDLE, BUFFERING, READY, ENDED }

@@ -6,6 +6,8 @@ import androidx.media3.common.C
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.sylphy.app.audio.SleepTimerController
+import io.sylphy.app.data.local.datastore.SettingsDataStore
 import io.sylphy.app.data.model.PlaybackState
 import io.sylphy.app.data.model.PlayerUiState
 import io.sylphy.app.data.model.RepeatMode
@@ -23,6 +25,8 @@ import javax.inject.Inject
 class PlayerViewModel @Inject constructor(
     private val player: Player,
     private val trackRepository: TrackRepository,
+    private val settingsDataStore: SettingsDataStore,
+    private val sleepTimerController: SleepTimerController,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlayerUiState())
@@ -59,6 +63,8 @@ class PlayerViewModel @Inject constructor(
         syncPlaybackState()
         loadActiveTrack()
         startProgressPolling()
+        observeSettings()
+        observeSleepTimer()
     }
 
     fun playPause() {
@@ -99,6 +105,17 @@ class PlayerViewModel @Inject constructor(
         }
         player.setPlaybackSpeed(next)
         _uiState.update { it.copy(speed = next) }
+        viewModelScope.launch { settingsDataStore.setPlaybackSpeed(next) }
+    }
+
+    fun adjustVolume(delta: Float) {
+        val next = (player.volume + delta).coerceIn(0f, 1f)
+        player.volume = next
+        _uiState.update { it.copy(volume = next) }
+    }
+
+    fun setCrossfadeDuration(ms: Int) {
+        viewModelScope.launch { settingsDataStore.setCrossfadeDuration(ms) }
     }
 
     private fun startProgressPolling() {
@@ -121,7 +138,32 @@ class PlayerViewModel @Inject constructor(
                 speed = player.playbackParameters.speed,
                 shuffleEnabled = player.shuffleModeEnabled,
                 repeatMode = player.repeatMode.toRepeatMode(),
+                volume = player.volume,
             )
+        }
+    }
+
+    private fun observeSettings() {
+        viewModelScope.launch {
+            settingsDataStore.settings.collect { settings ->
+                if (player.playbackParameters.speed != settings.playbackSpeed) {
+                    player.setPlaybackSpeed(settings.playbackSpeed)
+                }
+                _uiState.update {
+                    it.copy(
+                        speed = settings.playbackSpeed,
+                        crossfadeDurationMs = settings.crossfadeDurationMs,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun observeSleepTimer() {
+        viewModelScope.launch {
+            sleepTimerController.state.collect { timer ->
+                _uiState.update { it.copy(sleepTimerRemainingMs = timer.remainingMs) }
+            }
         }
     }
 
