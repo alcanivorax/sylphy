@@ -32,11 +32,11 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -142,36 +142,42 @@ fun LibraryScreen(
         ScanProgressBar(uiState.scanStatus)
         LibrarySubTabs(uiState.selectedTab, viewModel::selectTab)
 
-        val searchResults = uiState.searchResults
-        if (searchResults != null) {
-            SearchResultsList(
-                results = searchResults,
-                onTrackClick = { viewModel.playTrack(it, searchResults.tracks) },
-                onTrackLongClick = { contextMenuTrack = it },
-                onAlbumClick = { navController.navigate(Screen.AlbumDetail.route(it.id)) },
-                onArtistClick = { navController.navigate(Screen.ArtistDetail.route(it.id)) },
-            )
-        } else {
-            when (uiState.selectedTab) {
-                LibraryTab.Songs -> SongsTab(
-                    tracks = uiState.tracks,
-                    recentlyPlayed = uiState.recentlyPlayed,
-                    onTrackClick = { viewModel.playTrack(it, uiState.tracks) },
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+        ) {
+            val searchResults = uiState.searchResults
+            if (searchResults != null) {
+                SearchResultsList(
+                    results = searchResults,
+                    onTrackClick = { viewModel.playTrack(it, searchResults.tracks) },
                     onTrackLongClick = { contextMenuTrack = it },
-                )
-                LibraryTab.Albums -> AlbumsTab(
-                    albums = uiState.albums,
                     onAlbumClick = { navController.navigate(Screen.AlbumDetail.route(it.id)) },
-                )
-                LibraryTab.Artists -> ArtistsTab(
-                    artists = uiState.artists,
                     onArtistClick = { navController.navigate(Screen.ArtistDetail.route(it.id)) },
                 )
-                LibraryTab.Playlists -> PlaylistsTab(
-                    playlists = uiState.playlists,
-                    onCreate = { showCreatePlaylist = true },
-                    onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.route(it.id)) },
-                )
+            } else {
+                when (uiState.selectedTab) {
+                    LibraryTab.Songs -> SongsTab(
+                        tracks = uiState.tracks,
+                        recentlyPlayed = uiState.recentlyPlayed,
+                        onTrackClick = { viewModel.playTrack(it, uiState.tracks) },
+                        onTrackLongClick = { contextMenuTrack = it },
+                    )
+                    LibraryTab.Albums -> AlbumsTab(
+                        albums = uiState.albums,
+                        onAlbumClick = { navController.navigate(Screen.AlbumDetail.route(it.id)) },
+                    )
+                    LibraryTab.Artists -> ArtistsTab(
+                        artists = uiState.artists,
+                        onArtistClick = { navController.navigate(Screen.ArtistDetail.route(it.id)) },
+                    )
+                    LibraryTab.Playlists -> PlaylistsTab(
+                        playlists = uiState.playlists,
+                        onCreate = { showCreatePlaylist = true },
+                        onPlaylistClick = { navController.navigate(Screen.PlaylistDetail.route(it.id)) },
+                    )
+                }
             }
         }
     }
@@ -184,7 +190,7 @@ fun LibraryScreen(
                 ContextMenuAction("Play next", Icons.Default.PlayArrow) {
                     viewModel.playTrack(track, listOf(track))
                 },
-                ContextMenuAction("Add to playlist", Icons.Default.PlaylistAdd) {
+                ContextMenuAction("Add to playlist", Icons.AutoMirrored.Filled.PlaylistAdd) {
                     playlistTarget = track
                 },
                 ContextMenuAction(
