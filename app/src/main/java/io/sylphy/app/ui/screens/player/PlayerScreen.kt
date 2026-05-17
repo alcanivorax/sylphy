@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +49,7 @@ import io.sylphy.app.ui.components.player.SylphySeekBar
 import io.sylphy.app.ui.components.player.TickerTape
 import io.sylphy.app.ui.components.player.TrackInfoSection
 import io.sylphy.app.ui.components.player.TransportControls
+import io.sylphy.app.ui.components.shared.EmptyState
 import io.sylphy.app.ui.theme.BgBase
 import io.sylphy.app.ui.theme.BorderDefault
 import io.sylphy.app.ui.theme.ChipCorner
@@ -98,10 +101,10 @@ fun PlayerScreen(
             },
     ) {
         if (track == null) {
-            Text(
-                text = "\u2014",
-                style = SylphyType.DisplayLarge,
-                color = FgMuted,
+            EmptyState(
+                title = "Nothing playing",
+                description = "Open Library to choose a track.",
+                action = "Open Library" to { navController.navigate(Screen.Library.route) },
                 modifier = Modifier.align(Alignment.Center),
             )
             return@Box
@@ -113,11 +116,13 @@ fun PlayerScreen(
                 .padding(horizontal = Spacing.lg)
                 .padding(top = Spacing.lg, bottom = Spacing.md),
         ) {
-            val artSize = if (maxWidth < Layout.albumArtSize + Spacing.xxxl) {
+            val widthBoundArtSize = if (maxWidth < Layout.albumArtSize + Spacing.xxxl) {
                 maxWidth - Spacing.xxl
             } else {
                 Layout.albumArtSize
             }
+            val heightBoundArtSize = (maxHeight - 380.dp).coerceIn(168.dp, Layout.albumArtSize)
+            val artSize = minOf(widthBoundArtSize, heightBoundArtSize)
             val progress by animateFloatAsState(
                 targetValue = if (uiState.duration > 0L) {
                     (uiState.position.toFloat() / uiState.duration).coerceIn(0f, 1f)
@@ -128,7 +133,11 @@ fun PlayerScreen(
                 label = "player_progress",
             )
 
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+            ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.weight(1f))
                     IconButton(onClick = { settingsOpen = true }) {

@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -246,39 +247,42 @@ private fun ScanProgressBar(scanStatus: ScanProgress) {
 private fun LibrarySubTabs(selected: LibraryTab, onSelect: (LibraryTab) -> Unit) {
     val tabs = LibraryTab.entries
     val density = LocalDensity.current
-    val tabWidth = 88.dp
     val underlineOffset = remember { Animatable(0f) }
-    val tabWidthPx = with(density) { tabWidth.toPx() }
 
-    LaunchedEffect(selected) {
-        underlineOffset.animateTo(
-            targetValue = selected.ordinal * tabWidthPx,
-            animationSpec = tween(Duration.Normal, easing = SylphyEasing.Standard),
-        )
-    }
+    BoxWithConstraints(Modifier.padding(top = Spacing.md, bottom = Spacing.sm)) {
+        val tabWidth = maxWidth / tabs.size
+        val tabWidthPx = with(density) { tabWidth.toPx() }
 
-    Column(Modifier.padding(top = Spacing.md, bottom = Spacing.sm)) {
-        Row {
-            tabs.forEach { tab ->
-                Box(
-                    modifier = Modifier
-                        .width(tabWidth)
-                        .height(40.dp)
-                        .clickable { onSelect(tab) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(tab.name.uppercase(), style = SylphyType.CodeSmall, color = if (tab == selected) FgPrimary else FgMuted)
+        LaunchedEffect(selected, tabWidthPx) {
+            underlineOffset.animateTo(
+                targetValue = selected.ordinal * tabWidthPx,
+                animationSpec = tween(Duration.Normal, easing = SylphyEasing.Standard),
+            )
+        }
+
+        Column {
+            Row(Modifier.fillMaxWidth()) {
+                tabs.forEach { tab ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .clickable { onSelect(tab) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(tab.name.uppercase(), style = SylphyType.CodeSmall, color = if (tab == selected) FgPrimary else FgMuted)
+                    }
                 }
             }
-        }
-        Box(Modifier.fillMaxWidth().height(2.dp)) {
-            Box(
-                Modifier
-                    .offset { IntOffset(underlineOffset.value.roundToInt(), 0) }
-                    .width(tabWidth)
-                    .height(2.dp)
-                    .background(FgPrimary),
-            )
+            Box(Modifier.fillMaxWidth().height(2.dp)) {
+                Box(
+                    Modifier
+                        .offset { IntOffset(underlineOffset.value.roundToInt(), 0) }
+                        .width(tabWidth)
+                        .height(2.dp)
+                        .background(FgPrimary),
+                )
+            }
         }
     }
 }
