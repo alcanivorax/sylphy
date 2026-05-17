@@ -1,7 +1,10 @@
 package io.sylphy.app.ui.screens.library
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -54,16 +57,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import io.sylphy.app.core.util.toHhMm
 import io.sylphy.app.core.util.toMmSs
 import io.sylphy.app.core.util.toTrackCountLabel
@@ -96,21 +98,32 @@ import io.sylphy.app.ui.theme.SylphyEasing
 import io.sylphy.app.ui.theme.SylphyType
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalPermissionsApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LibraryScreen(
     navController: NavController,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var contextMenuTrack by remember { mutableStateOf<Track?>(null) }
     var playlistTarget by remember { mutableStateOf<Track?>(null) }
     var showCreatePlaylist by remember { mutableStateOf(false) }
 
-    val permission = rememberPermissionState(
+    val mediaPermission =
         if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO
         else Manifest.permission.READ_EXTERNAL_STORAGE
-    )
+    var hasMediaPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, mediaPermission) == PackageManager.PERMISSION_GRANTED,
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        hasMediaPermission = granted
+        if (granted) viewModel.scanLibrary()
+    }
 
     Column(
         modifier = Modifier
@@ -124,11 +137,11 @@ fun LibraryScreen(
                 Icon(Icons.Default.QueryStats, contentDescription = "Stats", tint = FgPrimary)
             }
             SylphyButton(
-                text = if (permission.status.isGranted) "Scan" else "Permission",
+                text = if (hasMediaPermission) "Scan" else "Permission",
                 variant = ButtonVariant.Outline,
                 onClick = {
-                    if (permission.status.isGranted) viewModel.scanLibrary()
-                    else permission.launchPermissionRequest()
+                    if (hasMediaPermission) viewModel.scanLibrary()
+                    else permissionLauncher.launch(mediaPermission)
                 },
             )
         }

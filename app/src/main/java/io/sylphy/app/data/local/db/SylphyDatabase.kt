@@ -45,7 +45,7 @@ class WaveformConverter {
         QueueSnapshotEntity::class,
         TrackFtsEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(WaveformConverter::class)

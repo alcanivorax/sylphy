@@ -152,11 +152,6 @@ dependencies {
     // Handles content:// URIs, file paths, and HTTP URLs with built-in disk cache.
     implementation(libs.coil.compose)
 
-    // ── Accompanist (Runtime permissions) ────────────────────────────────────
-    // Provides rememberPermissionState / rememberMultiplePermissionsState.
-    // Agent: this library is soft-deprecated; migrate to Compose permission APIs when stable.
-    implementation(libs.accompanist.permissions)
-
     // ── Timber (Structured logging) ───────────────────────────────────────────
     implementation(libs.timber)
 

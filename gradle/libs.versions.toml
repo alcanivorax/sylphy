@@ -55,11 +55,6 @@ coroutines              = "1.10.2"
 # ── Coil (Image loading for album artwork) ───────────────────────────────────
 coil                    = "2.7.0"
 
-# ── Accompanist (Permission handling) ────────────────────────────────────────
-# Provides rememberPermissionState / rememberMultiplePermissionsState.
-# Deprecated upstream but still the cleanest API available.
-accompanist             = "0.37.3"
-
 # ── Timber (Logging) ──────────────────────────────────────────────────────────
 timber                  = "5.0.1"
 
@@ -137,9 +132,6 @@ kotlinx-coroutines-guava   = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 # ── Coil ──────────────────────────────────────────────────────────────────────
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
-
-# ── Accompanist ───────────────────────────────────────────────────────────────
-accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
 
 # ── Timber ────────────────────────────────────────────────────────────────────
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
