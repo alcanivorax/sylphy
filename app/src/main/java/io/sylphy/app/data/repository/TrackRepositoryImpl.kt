@@ -19,6 +19,7 @@ import io.sylphy.app.domain.repository.TrackRepository
 import io.sylphy.app.service.WaveformScanWorker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -42,9 +43,14 @@ class TrackRepositoryImpl @Inject constructor(
     override fun getRecentlyPlayed(limit: Int): Flow<List<Track>> =
         trackDao.getRecentlyPlayed(limit).mapList { it.toTrack() }
 
-    override fun searchTracks(query: String): Flow<List<Track>> =
-        trackDao.searchTracks(query.trim().split(Regex("\\s+")).joinToString(" ") { "$it*" })
-            .mapList { it.toTrack() }
+    override fun searchTracks(query: String): Flow<List<Track>> {
+        val ftsQuery = query.toFtsPrefixQuery()
+        return if (ftsQuery.isBlank()) {
+            flowOf(emptyList())
+        } else {
+            trackDao.searchTracks(ftsQuery).mapList { it.toTrack() }
+        }
+    }
 
     override fun getTracksByAlbum(album: String): Flow<List<Track>> =
         trackDao.getTracksByAlbum(album).mapList { it.toTrack() }
@@ -100,5 +106,14 @@ class TrackRepositoryImpl @Inject constructor(
         if (entities.isNotEmpty()) {
             trackDao.insertSearchRows(entities.map { it.toFtsEntity() })
         }
+    }
+
+    private fun String.toFtsPrefixQuery(): String {
+        val tokens = trim()
+            .split(Regex("\\s+"))
+            .map { token -> token.filter { it.isLetterOrDigit() } }
+            .filter { it.isNotBlank() }
+
+        return tokens.joinToString(" ") { "$it*" }
     }
 }

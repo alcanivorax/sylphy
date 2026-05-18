@@ -30,19 +30,24 @@ fun AlbumArtwork(
     size: Dp = Layout.albumArtSize,
 ) {
     val context = LocalContext.current
+    val sizedModifier = if (size == Dp.Unspecified) modifier else modifier.size(size)
 
     Box(
-        modifier = modifier
-            .size(size)
+        modifier = sizedModifier
             .clip(ContainerCorner)
             .border(Layout.borderThin, BorderDefault, ContainerCorner)
             .background(BgElevated),
         contentAlignment = Alignment.Center,
     ) {
-        if (artworkPath != null) {
+        if (!artworkPath.isNullOrBlank()) {
+            val imageData = when {
+                artworkPath.startsWith("content://") -> artworkPath
+                artworkPath.startsWith("file://") -> artworkPath
+                else -> "file://$artworkPath"
+            }
             AsyncImage(
                 model = ImageRequest.Builder(context)
-                    .data("file://$artworkPath")
+                    .data(imageData)
                     .crossfade(Duration.Normal)
                     .build(),
                 contentDescription = null,

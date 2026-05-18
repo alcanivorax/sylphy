@@ -61,6 +61,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -319,8 +320,8 @@ private fun SongsTab(
             .toSortedMap()
     }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        stickyHeader(key = "recent") {
-            if (recentlyPlayed.isNotEmpty()) {
+        if (recentlyPlayed.isNotEmpty()) {
+            stickyHeader(key = "recent") {
                 RecentlyPlayedStrip(recentlyPlayed, onTrackClick)
             }
         }
@@ -368,7 +369,7 @@ private fun AlbumsTab(albums: List<Album>, onAlbumClick: (Album) -> Unit) {
 @Composable
 private fun AlbumCard(album: Album, onClick: (Album) -> Unit) {
     Column(Modifier.clickable { onClick(album) }) {
-        AlbumArtwork(album.artworkPath, modifier = Modifier.fillMaxWidth().aspectRatio(1f), size = 180.dp)
+        AlbumArtwork(album.artworkPath, modifier = Modifier.fillMaxWidth().aspectRatio(1f), size = Dp.Unspecified)
         Spacer(Modifier.height(Spacing.sm))
         Text(album.title, style = SylphyType.Code, color = FgPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(album.artist, style = SylphyType.BodySmall, color = FgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -377,7 +378,7 @@ private fun AlbumCard(album: Album, onClick: (Album) -> Unit) {
 
 @Composable
 private fun ArtistsTab(artists: List<Artist>, onArtistClick: (Artist) -> Unit) {
-    LazyColumn {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(artists, key = { it.id }) { artist ->
             ListEntityRow(
                 title = artist.name,
@@ -390,7 +391,7 @@ private fun ArtistsTab(artists: List<Artist>, onArtistClick: (Artist) -> Unit) {
 
 @Composable
 private fun PlaylistsTab(playlists: List<Playlist>, onCreate: () -> Unit, onPlaylistClick: (Playlist) -> Unit) {
-    LazyColumn {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
             ListEntityRow("Create playlist", "New custom queue", onCreate, leading = Icons.Default.Add)
         }
@@ -413,15 +414,24 @@ private fun SearchResultsList(
     onArtistClick: (Artist) -> Unit,
 ) {
     LazyColumn(Modifier.fillMaxSize()) {
-        item { SectionHeader("SONGS") }
-        items(results.tracks, key = { it.id }) { TrackRow(it, onTrackClick, onTrackLongClick) }
-        item { SectionHeader("ALBUMS") }
-        items(results.albums, key = { it.id }) { album ->
-            ListEntityRow(album.title, album.artist, { onAlbumClick(album) })
+        if (results.tracks.isNotEmpty()) {
+            item(key = "songs_header") { SectionHeader("SONGS") }
+            items(results.tracks, key = { it.id }) { TrackRow(it, onTrackClick, onTrackLongClick) }
         }
-        item { SectionHeader("ARTISTS") }
-        items(results.artists, key = { it.id }) { artist ->
-            ListEntityRow(artist.name, artist.trackCount.toTrackCountLabel(), { onArtistClick(artist) })
+        if (results.albums.isNotEmpty()) {
+            item(key = "albums_header") { SectionHeader("ALBUMS") }
+            items(results.albums, key = { it.id }) { album ->
+                ListEntityRow(album.title, album.artist, { onAlbumClick(album) })
+            }
+        }
+        if (results.artists.isNotEmpty()) {
+            item(key = "artists_header") { SectionHeader("ARTISTS") }
+            items(results.artists, key = { it.id }) { artist ->
+                ListEntityRow(artist.name, artist.trackCount.toTrackCountLabel(), { onArtistClick(artist) })
+            }
+        }
+        if (results.tracks.isEmpty() && results.albums.isEmpty() && results.artists.isEmpty()) {
+            item(key = "empty_search") { SectionHeader("NO RESULTS") }
         }
     }
 }

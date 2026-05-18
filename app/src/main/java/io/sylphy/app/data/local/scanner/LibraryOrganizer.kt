@@ -19,7 +19,10 @@ class LibraryOrganizer @Inject constructor(
 ) {
 
     suspend fun organize(tracks: List<TrackEntity>) = withContext(Dispatchers.IO) {
-        if (tracks.isNotEmpty()) {
+        if (tracks.isEmpty()) {
+            albumDao.deleteAll()
+            artistDao.deleteAll()
+        } else {
             organizeAlbums(tracks)
             organizeArtists(tracks)
             Timber.d("Organized ${tracks.size} tracks into albums/artists")
@@ -50,7 +53,7 @@ class LibraryOrganizer @Inject constructor(
         albumDao.insertAlbums(albums)
 
         val activeIds = albums.map { it.id }
-        albumDao.removeStale(activeIds)
+        if (activeIds.isEmpty()) albumDao.deleteAll() else albumDao.removeStale(activeIds)
     }
 
     private suspend fun organizeArtists(tracks: List<TrackEntity>) {
@@ -71,6 +74,6 @@ class LibraryOrganizer @Inject constructor(
         artistDao.insertArtists(artists)
 
         val activeIds = artists.map { it.id }
-        artistDao.removeStale(activeIds)
+        if (activeIds.isEmpty()) artistDao.deleteAll() else artistDao.removeStale(activeIds)
     }
 }

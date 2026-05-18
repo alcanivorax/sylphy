@@ -34,6 +34,9 @@ interface ArtistDao {
     @Query("DELETE FROM artists WHERE id NOT IN (:activeIds)")
     suspend fun removeStale(activeIds: List<String>)
 
+    @Query("DELETE FROM artists")
+    suspend fun deleteAll()
+
     @Query("SELECT COUNT(*) FROM artists")
     suspend fun getArtistCount(): Int
 }

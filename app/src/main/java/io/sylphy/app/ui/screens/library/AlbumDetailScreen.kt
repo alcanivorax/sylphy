@@ -15,8 +15,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -128,7 +129,7 @@ private fun DetailScaffold(navController: NavController, content: @Composable Co
             .padding(Spacing.md),
     ) {
         IconButton(onClick = { navController.popBackStack() }) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = FgPrimary)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = FgPrimary)
         }
         Spacer(Modifier.height(Spacing.sm))
         content()
@@ -166,7 +167,7 @@ private fun DetailActions(onPlayAll: () -> Unit, onShuffle: () -> Unit) {
 @Composable
 private fun NumberedTrackList(tracks: List<Track>, onTrackClick: (Track) -> Unit) {
     LazyColumn {
-        items(tracks, key = { it.id }) { track ->
+        itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -175,7 +176,7 @@ private fun NumberedTrackList(tracks: List<Track>, onTrackClick: (Track) -> Unit
                     .padding(vertical = Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text((track.trackNumber ?: tracks.indexOf(track) + 1).toString().padStart(2, '0'), style = SylphyType.CodeSmall, color = FgMuted)
+                Text((track.trackNumber ?: index + 1).toString().padStart(2, '0'), style = SylphyType.CodeSmall, color = FgMuted)
                 Spacer(Modifier.width(Spacing.md))
                 Column(Modifier.weight(1f)) {
                     Text(track.title, style = SylphyType.Code, color = FgPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)

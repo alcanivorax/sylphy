@@ -2,6 +2,7 @@ package io.sylphy.app.data.local.scanner
 
 import android.content.ContentResolver
 import android.content.Context
+import android.database.Cursor
 import android.provider.MediaStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.sylphy.app.data.local.db.dao.TrackDao
@@ -75,19 +76,19 @@ class MediaScanner @Inject constructor(
 
         cursor.use {
             val idCol          = it.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-            val dataCol        = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+            val dataCol        = it.getColumnIndex(MediaStore.Audio.Media.DATA)
             val titleCol       = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val artistCol      = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
             val albumCol       = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
-            val albumArtistCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ARTIST)
-            val genreCol       = it.getColumnIndexOrThrow(MediaStore.Audio.Media.GENRE)
-            val yearCol        = it.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
-            val trackCol       = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
-            val discCol        = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DISC_NUMBER)
+            val albumArtistCol = it.getColumnIndex(MediaStore.Audio.Media.ALBUM_ARTIST)
+            val genreCol       = it.getColumnIndex(MediaStore.Audio.Media.GENRE)
+            val yearCol        = it.getColumnIndex(MediaStore.Audio.Media.YEAR)
+            val trackCol       = it.getColumnIndex(MediaStore.Audio.Media.TRACK)
+            val discCol        = it.getColumnIndex(MediaStore.Audio.Media.DISC_NUMBER)
             val durationCol    = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
-            val sizeCol        = it.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
-            val mimeCol        = it.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
-            val dateCol        = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
+            val sizeCol        = it.getColumnIndex(MediaStore.Audio.Media.SIZE)
+            val mimeCol        = it.getColumnIndex(MediaStore.Audio.Media.MIME_TYPE)
+            val dateCol        = it.getColumnIndex(MediaStore.Audio.Media.DATE_ADDED)
 
             while (it.moveToNext()) {
                 runCatching {
@@ -97,22 +98,22 @@ class MediaScanner @Inject constructor(
                     TrackEntity(
                         id          = mediaId.toString(),
                         contentUri  = uri,
-                        title       = it.getString(titleCol)?.takeIf { t -> t.isNotBlank() }
-                                        ?: it.getString(dataCol)?.substringAfterLast('/')
+                        title       = it.getStringOrNull(titleCol)?.takeIf { t -> t.isNotBlank() }
+                                        ?: it.getStringOrNull(dataCol)?.substringAfterLast('/')
                                         ?: "Unknown",
-                        artist      = it.getString(artistCol)?.takeIf { a -> a != "<unknown>" }
+                        artist      = it.getStringOrNull(artistCol)?.takeIf { a -> a != "<unknown>" }
                                         ?: "Unknown Artist",
-                        album       = it.getString(albumCol)?.takeIf { a -> a != "<unknown>" }
+                        album       = it.getStringOrNull(albumCol)?.takeIf { a -> a != "<unknown>" }
                                         ?: "Unknown Album",
-                        albumArtist = it.getString(albumArtistCol),
-                        genre       = it.getString(genreCol),
-                        year        = it.getInt(yearCol).takeIf { y -> y > 0 },
-                        trackNumber = it.getInt(trackCol).takeIf { n -> n > 0 },
-                        discNumber  = it.getInt(discCol).takeIf { n -> n > 0 },
+                        albumArtist = it.getStringOrNull(albumArtistCol),
+                        genre       = it.getStringOrNull(genreCol),
+                        year        = it.getIntOrNull(yearCol)?.takeIf { y -> y > 0 },
+                        trackNumber = it.getIntOrNull(trackCol)?.takeIf { n -> n > 0 },
+                        discNumber  = it.getIntOrNull(discCol)?.takeIf { n -> n > 0 },
                         durationMs  = it.getLong(durationCol),
-                        fileSize    = it.getLong(sizeCol).takeIf { s -> s > 0 },
-                        mimeType    = it.getString(mimeCol),
-                        addedAt     = it.getLong(dateCol) * 1000L,
+                        fileSize    = it.getLongOrNull(sizeCol)?.takeIf { s -> s > 0 },
+                        mimeType    = it.getStringOrNull(mimeCol),
+                        addedAt     = (it.getLongOrNull(dateCol) ?: 0L) * 1000L,
                     )
                 }.onSuccess { entity ->
                     batch.add(entity)
@@ -138,4 +139,13 @@ class MediaScanner @Inject constructor(
         Timber.d("Scan complete: $total tracks found")
         emit(ScanProgress.Done(total))
     }
+
+    private fun Cursor.getStringOrNull(columnIndex: Int): String? =
+        if (columnIndex >= 0 && !isNull(columnIndex)) getString(columnIndex) else null
+
+    private fun Cursor.getIntOrNull(columnIndex: Int): Int? =
+        if (columnIndex >= 0 && !isNull(columnIndex)) getInt(columnIndex) else null
+
+    private fun Cursor.getLongOrNull(columnIndex: Int): Long? =
+        if (columnIndex >= 0 && !isNull(columnIndex)) getLong(columnIndex) else null
 }

@@ -37,6 +37,9 @@ interface AlbumDao {
     @Query("DELETE FROM albums WHERE id NOT IN (:activeIds)")
     suspend fun removeStale(activeIds: List<String>)
 
+    @Query("DELETE FROM albums")
+    suspend fun deleteAll()
+
     @Query("SELECT COUNT(*) FROM albums")
     suspend fun getAlbumCount(): Int
 }

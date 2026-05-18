@@ -22,10 +22,12 @@ import io.sylphy.app.domain.repository.TrackRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -77,6 +79,7 @@ class LibraryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
     private val searchQuery = MutableStateFlow("")
+    private var scanJob: Job? = null
 
     init {
         observeLibrary()
@@ -132,7 +135,8 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun scanLibrary() {
-        viewModelScope.launch {
+        if (scanJob?.isActive == true) return
+        scanJob = viewModelScope.launch {
             scanLibraryUseCase()
                 .onEach { progress ->
                     _uiState.update { it.copy(scanStatus = progress) }
@@ -147,7 +151,7 @@ class LibraryViewModel @Inject constructor(
                     Timber.e(e, "Scan failed")
                     _uiState.update { it.copy(scanStatus = ScanProgress.Error(e.message ?: "Unknown error")) }
                 }
-                .launchIn(this)
+                .collect {}
         }
     }
 
