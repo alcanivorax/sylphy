@@ -245,20 +245,22 @@ fun LibraryScreen(
 
 @Composable
 private fun ScanProgressBar(scanStatus: ScanProgress) {
-    AnimatedVisibility(scanStatus is ScanProgress.Scanning) {
-        val scanning = scanStatus as ScanProgress.Scanning
-        Column {
-            Spacer(Modifier.height(Spacing.sm))
-            LinearProgressIndicator(
-                progress = { scanning.progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(Spacing.px1),
-                color = FgPrimary,
-                trackColor = FgSubtle,
-            )
-            Spacer(Modifier.height(Spacing.xs))
-            Text("Scanning ${scanning.found} · ${(scanning.progress * 100).toInt()}%", style = SylphyType.CodeSmall, color = FgMuted)
+    val scanning = scanStatus as? ScanProgress.Scanning
+    AnimatedVisibility(scanning != null) {
+        scanning?.let {
+            Column {
+                Spacer(Modifier.height(Spacing.sm))
+                LinearProgressIndicator(
+                    progress = { it.progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(Spacing.px1),
+                    color = FgPrimary,
+                    trackColor = FgSubtle,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Text("Scanning ${it.found} · ${(it.progress * 100).toInt()}%", style = SylphyType.CodeSmall, color = FgMuted)
+            }
         }
     }
 }

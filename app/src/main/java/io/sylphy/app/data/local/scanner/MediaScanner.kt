@@ -1,5 +1,6 @@
 package io.sylphy.app.data.local.scanner
 
+import android.content.ContentUris
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
@@ -7,10 +8,11 @@ import android.provider.MediaStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.sylphy.app.data.local.db.dao.TrackDao
 import io.sylphy.app.data.local.db.entity.TrackEntity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import timber.log.Timber
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,15 +31,10 @@ class MediaScanner @Inject constructor(
 
     private val projection = arrayOf(
         MediaStore.Audio.Media._ID,
-        MediaStore.Audio.Media.DATA,
+        MediaStore.Audio.Media.DISPLAY_NAME,
         MediaStore.Audio.Media.TITLE,
         MediaStore.Audio.Media.ARTIST,
         MediaStore.Audio.Media.ALBUM,
-        MediaStore.Audio.Media.ALBUM_ARTIST,
-        MediaStore.Audio.Media.GENRE,
-        MediaStore.Audio.Media.YEAR,
-        MediaStore.Audio.Media.TRACK,
-        MediaStore.Audio.Media.DISC_NUMBER,
         MediaStore.Audio.Media.DURATION,
         MediaStore.Audio.Media.SIZE,
         MediaStore.Audio.Media.MIME_TYPE,
@@ -51,13 +48,17 @@ class MediaScanner @Inject constructor(
         emit(ScanProgress.Scanning(0f, 0))
 
         val resolver: ContentResolver = context.contentResolver
-        val cursor = resolver.query(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-            projection,
-            selection,
-            null,
-            "${MediaStore.Audio.Media.TITLE} ASC",
-        )
+        val cursor = runCatching {
+            resolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                null,
+                "${MediaStore.Audio.Media.TITLE} ASC",
+            )
+        }.onFailure { e ->
+            Timber.e(e, "MediaStore query failed")
+        }.getOrNull()
 
         if (cursor == null) {
             emit(ScanProgress.Error("MediaStore query returned null"))
@@ -76,16 +77,11 @@ class MediaScanner @Inject constructor(
 
         cursor.use {
             val idCol          = it.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-            val dataCol        = it.getColumnIndex(MediaStore.Audio.Media.DATA)
-            val titleCol       = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-            val artistCol      = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
-            val albumCol       = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
-            val albumArtistCol = it.getColumnIndex(MediaStore.Audio.Media.ALBUM_ARTIST)
-            val genreCol       = it.getColumnIndex(MediaStore.Audio.Media.GENRE)
-            val yearCol        = it.getColumnIndex(MediaStore.Audio.Media.YEAR)
-            val trackCol       = it.getColumnIndex(MediaStore.Audio.Media.TRACK)
-            val discCol        = it.getColumnIndex(MediaStore.Audio.Media.DISC_NUMBER)
-            val durationCol    = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+            val nameCol        = it.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME)
+            val titleCol       = it.getColumnIndex(MediaStore.Audio.Media.TITLE)
+            val artistCol      = it.getColumnIndex(MediaStore.Audio.Media.ARTIST)
+            val albumCol       = it.getColumnIndex(MediaStore.Audio.Media.ALBUM)
+            val durationCol    = it.getColumnIndex(MediaStore.Audio.Media.DURATION)
             val sizeCol        = it.getColumnIndex(MediaStore.Audio.Media.SIZE)
             val mimeCol        = it.getColumnIndex(MediaStore.Audio.Media.MIME_TYPE)
             val dateCol        = it.getColumnIndex(MediaStore.Audio.Media.DATE_ADDED)
@@ -93,24 +89,22 @@ class MediaScanner @Inject constructor(
             while (it.moveToNext()) {
                 runCatching {
                     val mediaId = it.getLong(idCol)
-                    val uri     = "${MediaStore.Audio.Media.EXTERNAL_CONTENT_URI}/$mediaId"
+                    val uri = ContentUris.withAppendedId(
+                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                        mediaId,
+                    ).toString()
 
                     TrackEntity(
                         id          = mediaId.toString(),
                         contentUri  = uri,
                         title       = it.getStringOrNull(titleCol)?.takeIf { t -> t.isNotBlank() }
-                                        ?: it.getStringOrNull(dataCol)?.substringAfterLast('/')
+                                        ?: it.getStringOrNull(nameCol)?.takeIf { n -> n.isNotBlank() }
                                         ?: "Unknown",
                         artist      = it.getStringOrNull(artistCol)?.takeIf { a -> a != "<unknown>" }
                                         ?: "Unknown Artist",
                         album       = it.getStringOrNull(albumCol)?.takeIf { a -> a != "<unknown>" }
                                         ?: "Unknown Album",
-                        albumArtist = it.getStringOrNull(albumArtistCol),
-                        genre       = it.getStringOrNull(genreCol),
-                        year        = it.getIntOrNull(yearCol)?.takeIf { y -> y > 0 },
-                        trackNumber = it.getIntOrNull(trackCol)?.takeIf { n -> n > 0 },
-                        discNumber  = it.getIntOrNull(discCol)?.takeIf { n -> n > 0 },
-                        durationMs  = it.getLong(durationCol),
+                        durationMs  = it.getLongOrNull(durationCol) ?: 0L,
                         fileSize    = it.getLongOrNull(sizeCol)?.takeIf { s -> s > 0 },
                         mimeType    = it.getStringOrNull(mimeCol),
                         addedAt     = (it.getLongOrNull(dateCol) ?: 0L) * 1000L,
@@ -138,7 +132,7 @@ class MediaScanner @Inject constructor(
 
         Timber.d("Scan complete: $total tracks found")
         emit(ScanProgress.Done(total))
-    }
+    }.flowOn(Dispatchers.IO)
 
     private fun Cursor.getStringOrNull(columnIndex: Int): String? =
         if (columnIndex >= 0 && !isNull(columnIndex)) getString(columnIndex) else null

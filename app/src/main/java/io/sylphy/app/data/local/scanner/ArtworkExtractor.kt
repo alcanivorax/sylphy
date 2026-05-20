@@ -35,7 +35,7 @@ class ArtworkExtractor @Inject constructor(
                     Timber.w(e, "Artwork extraction failed: $trackId")
                 }.getOrNull()
             } finally {
-                retriever.release()
+                runCatching { retriever.release() }
             }
         }
 

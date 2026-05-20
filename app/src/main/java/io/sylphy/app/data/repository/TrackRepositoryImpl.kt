@@ -17,10 +17,13 @@ import io.sylphy.app.data.local.scanner.ScanProgress
 import io.sylphy.app.data.model.Track
 import io.sylphy.app.domain.repository.TrackRepository
 import io.sylphy.app.service.WaveformScanWorker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -64,19 +67,28 @@ class TrackRepositoryImpl @Inject constructor(
     override fun scanLibrary(): Flow<ScanProgress> =
         mediaScanner.scan().onEach { progress ->
             if (progress is ScanProgress.Done) {
-                val entities = trackDao.getAllTrackEntities()
-                rebuildSearchIndex(entities)
-                metadataReader.enrichBatch(entities)
-                val enriched = trackDao.getAllTrackEntities()
-                rebuildSearchIndex(enriched)
-                libraryOrganizer.organize(enriched)
-                WorkManager.getInstance(context).enqueueUniqueWork(
-                    "waveform_scan",
-                    ExistingWorkPolicy.REPLACE,
-                    OneTimeWorkRequestBuilder<WaveformScanWorker>().build(),
-                )
+                runCatching {
+                    val entities = trackDao.getAllTrackEntities()
+                    rebuildSearchIndex(entities)
+                    metadataReader.enrichBatch(entities)
+                    val enriched = trackDao.getAllTrackEntities()
+                    rebuildSearchIndex(enriched)
+                    libraryOrganizer.organize(enriched)
+                }.onFailure {
+                    Timber.e(it, "Post-scan library enrichment failed")
+                }
+
+                runCatching {
+                    WorkManager.getInstance(context).enqueueUniqueWork(
+                        "waveform_scan",
+                        ExistingWorkPolicy.REPLACE,
+                        OneTimeWorkRequestBuilder<WaveformScanWorker>().build(),
+                    )
+                }.onFailure {
+                    Timber.e(it, "Failed to enqueue waveform scan")
+                }
             }
-        }
+        }.flowOn(Dispatchers.IO)
 
     override suspend fun incrementPlayCount(id: String, timestamp: Long) =
         trackDao.incrementPlayCount(id, timestamp)

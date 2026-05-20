@@ -45,7 +45,7 @@ class MetadataReader @Inject constructor(
         }.onFailure {
             Timber.e(it, "MetadataReader failed for track ${entity.id}")
         }.getOrDefault(entity).also {
-            retriever.release()
+            runCatching { retriever.release() }
         }
     }
 
