@@ -1,5 +1,6 @@
 package io.sylphy.app.ui.components.shared
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -39,6 +40,8 @@ import io.sylphy.app.ui.theme.ChipCorner
 import io.sylphy.app.ui.theme.Duration
 import io.sylphy.app.ui.theme.FgMuted
 import io.sylphy.app.ui.theme.Layout
+import io.sylphy.app.ui.theme.NothingRed
+import io.sylphy.app.ui.theme.OLEDBlack
 import io.sylphy.app.ui.theme.Spacing
 import io.sylphy.app.ui.theme.SylphyEasing
 import io.sylphy.app.ui.theme.SylphyType
@@ -50,57 +53,60 @@ fun SylphyTabBar(
     selectedIndex: Int,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    isNothingOS: Boolean = false,
 ) {
     val haptic = LocalHapticFeedback.current
-    
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .height(Layout.topBarHeight)
-            .background(BgBase)
-            .border(width = Layout.borderThin, color = BorderDefault, shape = RectangleShape),
+            .background(if (isNothingOS) OLEDBlack else BgBase),
     ) {
         val tabWidth = maxWidth / tabs.size
         val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
-        val pillOffset = remember { Animatable(0f) }
+        val indicatorOffset = remember { Animatable(0f) }
 
         LaunchedEffect(selectedIndex, tabWidthPx) {
-            pillOffset.animateTo(
+            indicatorOffset.animateTo(
                 targetValue = selectedIndex * tabWidthPx,
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
+                animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
             )
         }
 
-        // Sliding inverted pill with smooth spring animation
+        val indicatorColor = if (isNothingOS) NothingRed else ActiveBackground
+
         Box(
             modifier = Modifier
-                .width(tabWidth - Spacing.md)
-                .fillMaxHeight()
-                .padding(vertical = Spacing.sm, horizontal = Spacing.sm)
+                .width(tabWidth * 0.6f)
+                .height(Spacing.px1)
                 .offset {
                     IntOffset(
-                        x = pillOffset.value.roundToInt() + Spacing.sm.roundToPx(),
-                        y = 0,
+                        x = indicatorOffset.value.roundToInt(),
+                        y = (Layout.topBarHeight - Spacing.px1).roundToPx(),
                     )
                 }
-                .background(ActiveBackground, ChipCorner),
+                .background(indicatorColor, RectangleShape),
         )
 
-        // Tab labels layered on top of the pill
         Row(modifier = Modifier.fillMaxSize()) {
             tabs.forEachIndexed { i, label ->
                 val active = i == selectedIndex
                 val interactionSource = remember { MutableInteractionSource() }
                 val pressed by interactionSource.collectIsPressedAsState()
                 val scale by androidx.compose.animation.core.animateFloatAsState(
-                    targetValue = if (pressed) 0.92f else 1f,
+                    targetValue = if (pressed) 0.96f else 1f,
                     animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
-                    label = "tab_scale"
+                    label = "tab_scale",
                 )
-                val textColor by androidx.compose.animation.animateColorAsState(
-                    targetValue = if (active) ActiveForeground else FgMuted,
+                val textColor by animateColorAsState(
+                    targetValue = when {
+                        active && isNothingOS -> NothingRed
+                        active -> ActiveForeground
+                        else -> FgMuted
+                    },
                     animationSpec = tween(Duration.Fast),
-                    label = "tab_text_color"
+                    label = "tab_text_color",
                 )
 
                 Box(
@@ -112,14 +118,14 @@ fun SylphyTabBar(
                         .clickable(
                             interactionSource = interactionSource,
                             indication = null,
-                        ) { 
+                        ) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onTabSelected(i) 
+                            onTabSelected(i)
                         },
                 ) {
                     Text(
-                        text = label,
-                        style = SylphyType.Heading,
+                        text = label.uppercase(),
+                        style = if (isNothingOS) SylphyType.CodeSmall else SylphyType.Heading,
                         color = textColor,
                     )
                 }

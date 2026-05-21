@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val settings by settingsDataStore.settings.collectAsState(initial = null)
             SylphyTheme(mode = settings?.themeMode ?: ThemeMode.MONOCHROME_DARK) {
-                SylphyNavGraph()
+                SylphyNavGraph(themeMode = settings?.themeMode ?: ThemeMode.MONOCHROME_DARK)
             }
         }
     }
