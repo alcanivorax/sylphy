@@ -27,7 +27,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -74,9 +76,9 @@ fun SylphyNavGraph(
 
     Scaffold(
         modifier = Modifier.pointerInput(Unit) {
-            awaitPointerEventScope {
+            awaitEachGesture {
                 while (true) {
-                    awaitPointerEvent()
+                    awaitPointerEvent(PointerEventPass.Final)
                     AmbientIdleClock.lastInteractionMs = System.currentTimeMillis()
                 }
             }
@@ -113,18 +115,20 @@ fun SylphyNavGraph(
                 .padding(padding)
                 .background(BgBase),
             enterTransition = {
-                fadeIn(tween(Duration.Normal, easing = SylphyEasing.Enter)) +
-                        slideInHorizontally(tween(Duration.Normal, easing = SylphyEasing.Enter)) { it / 12 }
+                fadeIn(tween(Duration.Slow, easing = SylphyEasing.Enter)) +
+                        slideInHorizontally(tween(Duration.Slow, easing = SylphyEasing.Standard)) { it / 8 }
             },
             exitTransition = {
-                fadeOut(tween(Duration.Fast, easing = SylphyEasing.Exit))
+                fadeOut(tween(Duration.Normal, easing = SylphyEasing.Exit)) +
+                        slideOutHorizontally(tween(Duration.Normal, easing = SylphyEasing.Standard)) { -it / 12 }
             },
             popEnterTransition = {
-                fadeIn(tween(Duration.Normal, easing = SylphyEasing.Enter))
+                fadeIn(tween(Duration.Slow, easing = SylphyEasing.Enter)) +
+                        slideInHorizontally(tween(Duration.Slow, easing = SylphyEasing.Standard)) { -it / 8 }
             },
             popExitTransition = {
-                fadeOut(tween(Duration.Fast, easing = SylphyEasing.Exit)) +
-                        slideOutHorizontally(tween(Duration.Normal, easing = SylphyEasing.Exit)) { it / 12 }
+                fadeOut(tween(Duration.Normal, easing = SylphyEasing.Exit)) +
+                        slideOutHorizontally(tween(Duration.Normal, easing = SylphyEasing.Standard)) { it / 12 }
             },
         ) {
             composable(Screen.Player.route)  { PlayerScreen(navController) }

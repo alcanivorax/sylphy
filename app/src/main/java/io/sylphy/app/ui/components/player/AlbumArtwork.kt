@@ -35,8 +35,8 @@ fun AlbumArtwork(
     Box(
         modifier = sizedModifier
             .clip(ContainerCorner)
-            .border(Layout.borderThin, BorderDefault, ContainerCorner)
-            .background(BgElevated),
+            .background(BgElevated)
+            .border(Layout.borderThin, BorderDefault, ContainerCorner),
         contentAlignment = Alignment.Center,
     ) {
         if (!artworkPath.isNullOrBlank()) {
@@ -48,17 +48,23 @@ fun AlbumArtwork(
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(imageData)
-                    .crossfade(Duration.Normal)
+                    .crossfade(Duration.Slow) // Softer crossfade
                     .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
+            // Subtle inner overlay for depth
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .border(Layout.borderThin, BorderDefault.copy(alpha = 0.1f), ContainerCorner)
+            )
         } else {
             Text(
-                text = "-",
-                style = SylphyType.Display,
-                color = FgSubtle,
+                text = "SYLPHY",
+                style = SylphyType.CodeSmall,
+                color = FgSubtle.copy(alpha = 0.5f),
             )
         }
     }

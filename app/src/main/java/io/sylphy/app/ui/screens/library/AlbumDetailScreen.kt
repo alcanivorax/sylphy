@@ -24,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +33,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import io.sylphy.app.core.util.toHhMm
+import io.sylphy.app.core.util.toMmSs
 import io.sylphy.app.core.util.toTrackCountLabel
 import io.sylphy.app.data.model.Album
 import io.sylphy.app.data.model.Track
@@ -40,6 +42,7 @@ import io.sylphy.app.ui.components.shared.ButtonVariant
 import io.sylphy.app.ui.components.shared.SylphyButton
 import io.sylphy.app.ui.navigation.Screen
 import io.sylphy.app.ui.theme.BgBase
+import io.sylphy.app.ui.theme.FgGhost
 import io.sylphy.app.ui.theme.FgMuted
 import io.sylphy.app.ui.theme.FgPrimary
 import io.sylphy.app.ui.theme.Layout
@@ -126,37 +129,46 @@ private fun DetailScaffold(navController: NavController, content: @Composable Co
         modifier = Modifier
             .fillMaxSize()
             .background(BgBase)
-            .padding(Spacing.md),
+            .padding(horizontal = Spacing.md),
     ) {
+        Spacer(Modifier.height(Spacing.md))
         IconButton(onClick = { navController.popBackStack() }) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = FgPrimary)
         }
-        Spacer(Modifier.height(Spacing.sm))
         content()
     }
 }
 
 @Composable
 private fun AlbumHeader(album: Album) {
-    AlbumArtwork(
-        artworkPath = album.artworkPath,
-        size = 260.dp,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Spacer(Modifier.height(Spacing.md))
-    Text(album.title, style = SylphyType.Display, color = FgPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-    val year = album.year?.toString()
-    Text(
-        listOfNotNull(album.artist, year, album.trackCount.toTrackCountLabel(), album.durationMs.toHhMm()).joinToString(" · "),
-        style = SylphyType.BodySmall,
-        color = FgMuted,
-    )
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        AlbumArtwork(
+            artworkPath = album.artworkPath,
+            size = 280.dp,
+        )
+        Spacer(Modifier.height(Spacing.lg))
+        Text(
+            text = album.title, 
+            style = SylphyType.Display, 
+            color = FgPrimary, 
+            maxLines = 2, 
+            overflow = TextOverflow.Ellipsis,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        val year = album.year?.toString()
+        Text(
+            text = listOfNotNull(album.artist, year, album.trackCount.toTrackCountLabel()).joinToString("  ·  "),
+            style = SylphyType.CodeSmall,
+            color = FgMuted,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+    }
 }
 
 @Composable
 private fun DetailActions(onPlayAll: () -> Unit, onShuffle: () -> Unit) {
     Row(
-        modifier = Modifier.padding(vertical = Spacing.md),
+        modifier = Modifier.padding(vertical = Spacing.lg),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         SylphyButton(text = "Play all", variant = ButtonVariant.Solid, onClick = onPlayAll, modifier = Modifier.weight(1f))
@@ -171,18 +183,32 @@ private fun NumberedTrackList(tracks: List<Track>, onTrackClick: (Track) -> Unit
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(Layout.trackRowHeight)
-                    .clickable { onTrackClick(track) }
-                    .padding(vertical = Spacing.sm),
+                    .height(64.dp)
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onTrackClick(track) }
+                    )
+                    .padding(vertical = Spacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text((track.trackNumber ?: index + 1).toString().padStart(2, '0'), style = SylphyType.CodeSmall, color = FgMuted)
-                Spacer(Modifier.width(Spacing.md))
+                Text(
+                    text = (track.trackNumber ?: index + 1).toString().padStart(2, '0'), 
+                    style = SylphyType.CodeSmall, 
+                    color = FgGhost,
+                    modifier = Modifier.width(32.dp)
+                )
                 Column(Modifier.weight(1f)) {
                     Text(track.title, style = SylphyType.Code, color = FgPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(track.durationMs.toHhMm(), style = SylphyType.BodySmall, color = FgMuted)
+                    Text(track.artist, style = SylphyType.BodySmall, color = FgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
+                Text(
+                    text = track.durationMs.toMmSs(), 
+                    style = SylphyType.CodeSmall, 
+                    color = FgGhost
+                )
             }
+            io.sylphy.app.ui.components.shared.SylphyDivider()
         }
     }
 }

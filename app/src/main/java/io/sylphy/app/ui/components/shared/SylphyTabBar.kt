@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,19 +60,19 @@ fun SylphyTabBar(
         LaunchedEffect(selectedIndex) {
             pillOffset.animateTo(
                 targetValue = selectedIndex * tabWidthPx,
-                animationSpec = tween(Duration.Normal, easing = SylphyEasing.Standard),
+                animationSpec = tween(Duration.Slow, easing = SylphyEasing.Standard),
             )
         }
 
         // Sliding inverted pill
         Box(
             modifier = Modifier
-                .width(tabWidth - Spacing.sm)
+                .width(tabWidth - Spacing.md)
                 .fillMaxHeight()
-                .padding(vertical = Spacing.sm, horizontal = Spacing.xs)
+                .padding(vertical = Spacing.sm, horizontal = Spacing.sm)
                 .offset {
                     IntOffset(
-                        x = pillOffset.value.roundToInt() + Spacing.xs.roundToPx(),
+                        x = pillOffset.value.roundToInt() + Spacing.sm.roundToPx(),
                         y = 0,
                     )
                 }
@@ -81,6 +82,13 @@ fun SylphyTabBar(
         // Tab labels layered on top of the pill
         Row(modifier = Modifier.fillMaxSize()) {
             tabs.forEachIndexed { i, label ->
+                val active = i == selectedIndex
+                val textColor by androidx.compose.animation.animateColorAsState(
+                    targetValue = if (active) ActiveForeground else FgMuted,
+                    animationSpec = tween(Duration.Normal),
+                    label = "tab_text_color"
+                )
+
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -94,7 +102,7 @@ fun SylphyTabBar(
                     Text(
                         text = label,
                         style = SylphyType.Heading,
-                        color = if (i == selectedIndex) ActiveForeground else FgMuted,
+                        color = textColor,
                     )
                 }
             }

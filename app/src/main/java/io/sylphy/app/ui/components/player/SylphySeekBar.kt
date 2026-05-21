@@ -24,8 +24,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import io.sylphy.app.core.util.toMmSs
 import io.sylphy.app.ui.theme.FgMuted
+import io.sylphy.app.ui.theme.FgPrimary
 import io.sylphy.app.ui.theme.Layout
 import io.sylphy.app.ui.theme.ProgressEmpty
 import io.sylphy.app.ui.theme.ProgressFilled
@@ -46,9 +48,11 @@ fun SylphySeekBar(
     var isDragging by remember { mutableStateOf(false) }
     val displayProgress = if (isDragging) localProgress else progress
     val displayPositionMs = (displayProgress * durationMs).toLong()
-    val dotRadius = with(LocalDensity.current) { Layout.seekDotRadius.toPx() }
+    val dotRadius = with(LocalDensity.current) { 
+        (if (isDragging) Layout.seekDotRadius * 1.5f else Layout.seekDotRadius).toPx() 
+    }
 
-    LaunchedEffect(progress, isDragging) {
+    LaunchedEffect(progress) {
         if (!isDragging) localProgress = progress
     }
 
@@ -56,7 +60,7 @@ fun SylphySeekBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(Layout.seekBarHeight)
+                .height(48.dp) // Larger hit target
                 .pointerInput(durationMs) {
                     detectTapGestures { offset ->
                         val fraction = (offset.x / size.width).coerceIn(0f, 1f)
@@ -69,7 +73,6 @@ fun SylphySeekBar(
                         onDragStart = { offset ->
                             isDragging = true
                             localProgress = (offset.x / size.width).coerceIn(0f, 1f)
-                            onSeek((localProgress * durationMs).toLong())
                         },
                         onDragEnd = {
                             onSeek((localProgress * durationMs).toLong())
@@ -86,23 +89,44 @@ fun SylphySeekBar(
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val y = center.y
                 val splitX = displayProgress * size.width
-                val baseHeight = 2f
+                val baseLineHeight = 3.dp.toPx()
 
                 if (waveformData != null && waveformData.isNotEmpty()) {
-                    val segWidth = size.width / waveformData.size
-                    waveformData.forEachIndexed { i, amplitude ->
-                        val x = i * segWidth
-                        val h = (baseHeight + amplitude * 4f).coerceIn(2f, 6f)
+                    val barWidth = 2.dp.toPx()
+                    val gap = 1.5.dp.toPx()
+                    val step = barWidth + gap
+                    val maxBars = (size.width / step).toInt()
+                    
+                    // Sample waveform to fit maxBars
+                    for (i in 0 until maxBars) {
+                        val x = i * step
+                        val sampleIdx = (i.toFloat() / maxBars * waveformData.size).toInt().coerceIn(0, waveformData.size - 1)
+                        val amplitude = waveformData[sampleIdx]
+                        val h = (baseLineHeight + amplitude * 16.dp.toPx()).coerceIn(baseLineHeight, 20.dp.toPx())
                         val color = if (x < splitX) ProgressFilled else ProgressEmpty
-                        drawRect(
+                        
+                        drawRoundRect(
                             color = color,
                             topLeft = Offset(x, y - h / 2f),
-                            size = Size((segWidth - 1f).coerceAtLeast(1f), h),
+                            size = Size(barWidth, h),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 2)
                         )
                     }
                 } else {
-                    drawLine(ProgressEmpty,  Offset(0f, y), Offset(size.width, y), baseHeight)
-                    drawLine(ProgressFilled, Offset(0f, y), Offset(splitX, y),     baseHeight)
+                    drawLine(
+                        color = ProgressEmpty,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = baseLineHeight,
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+                    drawLine(
+                        color = ProgressFilled,
+                        start = Offset(0f, y),
+                        end = Offset(splitX, y),
+                        strokeWidth = baseLineHeight,
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
                 }
 
                 drawCircle(
@@ -122,12 +146,12 @@ fun SylphySeekBar(
             Text(
                 text = displayPositionMs.toMmSs(),
                 style = SylphyType.CodeSmall,
-                color = FgMuted,
+                color = if (isDragging) FgPrimary else FgMuted,
             )
             Text(
                 text = "-${(durationMs - displayPositionMs).coerceAtLeast(0L).toMmSs()}",
                 style = SylphyType.CodeSmall,
-                color = FgMuted,
+                color = if (isDragging) FgPrimary else FgMuted,
             )
         }
     }

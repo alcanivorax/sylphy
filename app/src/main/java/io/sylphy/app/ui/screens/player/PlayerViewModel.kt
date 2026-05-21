@@ -121,8 +121,10 @@ class PlayerViewModel @Inject constructor(
     private fun startProgressPolling() {
         viewModelScope.launch {
             while (true) {
-                syncPlaybackState()
-                delay(500)
+                if (player.isPlaying) {
+                    syncPlaybackState()
+                }
+                delay(100)
             }
         }
     }

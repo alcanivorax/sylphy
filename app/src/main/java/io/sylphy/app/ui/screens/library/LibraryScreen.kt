@@ -8,11 +8,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -34,6 +37,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Add
@@ -59,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Dp
@@ -133,7 +138,7 @@ fun LibraryScreen(
             .padding(horizontal = Spacing.md, vertical = Spacing.lg),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("LIBRARY", style = SylphyType.Heading, color = FgPrimary, modifier = Modifier.weight(1f))
+            Text("LIBRARY", style = SylphyType.Display, color = FgPrimary, modifier = Modifier.weight(1f))
             IconButton(onClick = { navController.navigate(Screen.Stats.route) }) {
                 Icon(Icons.Default.QueryStats, contentDescription = "Stats", tint = FgPrimary)
             }
@@ -246,7 +251,11 @@ fun LibraryScreen(
 @Composable
 private fun ScanProgressBar(scanStatus: ScanProgress) {
     val scanning = scanStatus as? ScanProgress.Scanning
-    AnimatedVisibility(scanning != null) {
+    AnimatedVisibility(
+        visible = scanning != null,
+        enter = fadeIn(tween(Duration.Normal)),
+        exit = fadeOut(tween(Duration.Slow))
+    ) {
         scanning?.let {
             Column {
                 Spacer(Modifier.height(Spacing.sm))
@@ -254,12 +263,13 @@ private fun ScanProgressBar(scanStatus: ScanProgress) {
                     progress = { it.progress },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(Spacing.px1),
+                        .height(2.dp)
+                        .clip(CircleShape),
                     color = FgPrimary,
-                    trackColor = FgSubtle,
+                    trackColor = FgGhost,
                 )
                 Spacer(Modifier.height(Spacing.xs))
-                Text("Scanning ${it.found} · ${(it.progress * 100).toInt()}%", style = SylphyType.CodeSmall, color = FgMuted)
+                Text("SCANNING ${it.found} TRACKS · ${(it.progress * 100).toInt()}%", style = SylphyType.CodeSmall, color = FgMuted)
             }
         }
     }
@@ -271,37 +281,47 @@ private fun LibrarySubTabs(selected: LibraryTab, onSelect: (LibraryTab) -> Unit)
     val density = LocalDensity.current
     val underlineOffset = remember { Animatable(0f) }
 
-    BoxWithConstraints(Modifier.padding(top = Spacing.md, bottom = Spacing.sm)) {
+    BoxWithConstraints(Modifier.padding(top = Spacing.lg, bottom = Spacing.md)) {
         val tabWidth = maxWidth / tabs.size
         val tabWidthPx = with(density) { tabWidth.toPx() }
 
         LaunchedEffect(selected, tabWidthPx) {
             underlineOffset.animateTo(
                 targetValue = selected.ordinal * tabWidthPx,
-                animationSpec = tween(Duration.Normal, easing = SylphyEasing.Standard),
+                animationSpec = tween(Duration.Slow, easing = SylphyEasing.Standard),
             )
         }
 
         Column {
             Row(Modifier.fillMaxWidth()) {
                 tabs.forEach { tab ->
+                    val active = tab == selected
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(40.dp)
-                            .clickable { onSelect(tab) },
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { onSelect(tab) }
+                            ),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(tab.name.uppercase(), style = SylphyType.CodeSmall, color = if (tab == selected) FgPrimary else FgMuted)
+                        Text(
+                            text = tab.name.uppercase(), 
+                            style = SylphyType.CodeSmall, 
+                            color = if (active) FgPrimary else FgMuted,
+                            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal
+                        )
                     }
                 }
             }
-            Box(Modifier.fillMaxWidth().height(2.dp)) {
+            Box(Modifier.fillMaxWidth().height(1.dp).background(FgGhost)) {
                 Box(
                     Modifier
                         .offset { IntOffset(underlineOffset.value.roundToInt(), 0) }
                         .width(tabWidth)
-                        .height(2.dp)
+                        .height(1.dp)
                         .background(FgPrimary),
                 )
             }
@@ -444,21 +464,23 @@ internal fun TrackRow(track: Track, onTrackClick: (Track) -> Unit, onTrackLongCl
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(Layout.trackRowHeight)
+            .height(72.dp)
             .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
                 onClick = { onTrackClick(track) },
                 onLongClick = { onTrackLongClick(track) },
             )
             .padding(vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AlbumArtwork(track.artworkPath, size = Layout.albumArtSizeSm)
+        AlbumArtwork(track.artworkPath, size = 48.dp)
         Spacer(Modifier.width(Spacing.md))
         Column(Modifier.weight(1f)) {
             Text(track.title, style = SylphyType.Code, color = FgPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(track.artist, style = SylphyType.BodySmall, color = FgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(track.durationMs.toMmSs(), style = SylphyType.CodeSmall, color = FgMuted)
+        Text(track.durationMs.toMmSs(), style = SylphyType.CodeSmall, color = FgGhost)
     }
     SylphyDivider()
 }

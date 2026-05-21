@@ -37,7 +37,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -74,31 +76,13 @@ fun PlayerScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val track = uiState.activeTrack
     val scope = rememberCoroutineScope()
-    var settingsOpen by remember { mutableStateOf(false) }
     var volumeVisible by remember { mutableStateOf(false) }
     var volumeJob by remember { mutableStateOf<Job?>(null) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgBase)
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        if (event.changes.size == 2 && event.changes.all { it.pressed }) {
-                            val dy = event.changes.map { it.position.y - it.previousPosition.y }.average().toFloat()
-                            viewModel.adjustVolume((-dy / 400f).coerceIn(-0.08f, 0.08f))
-                            volumeVisible = true
-                            volumeJob?.cancel()
-                            volumeJob = scope.launch {
-                                delay(1500)
-                                volumeVisible = false
-                            }
-                        }
-                    }
-                }
-            },
+            .background(BgBase),
     ) {
         if (track == null) {
             EmptyState(
@@ -114,7 +98,27 @@ fun PlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = Spacing.lg)
-                .padding(top = Spacing.lg, bottom = Spacing.md),
+                .padding(top = Spacing.lg, bottom = Spacing.md)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        while (true) {
+                            val event = awaitPointerEvent() // Defaults to Main pass
+                            if (event.changes.size == 2 && event.changes.all { it.pressed }) {
+                                val dy = event.changes.map { it.position.y - it.previousPosition.y }.average().toFloat()
+                                if (dy != 0f) {
+                                    viewModel.adjustVolume((-dy / 400f).coerceIn(-0.08f, 0.08f))
+                                    volumeVisible = true
+                                    volumeJob?.cancel()
+                                    volumeJob = scope.launch {
+                                        delay(1500)
+                                        volumeVisible = false
+                                    }
+                                    event.changes.forEach { it.consume() }
+                                }
+                            }
+                        }
+                    }
+                },
         ) {
             val widthBoundArtSize = if (maxWidth < Layout.albumArtSize + Spacing.xxxl) {
                 maxWidth - Spacing.xxl
@@ -138,12 +142,9 @@ fun PlayerScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
             ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(Modifier.weight(1f))
-                    IconButton(onClick = { settingsOpen = true }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Audio settings", tint = FgPrimary)
-                    }
-                }
+                // Top header space
+                Spacer(Modifier.height(Spacing.md))
+                
                 TrackInfoSection(track = track)
 
                 Spacer(Modifier.height(Spacing.lg))
@@ -200,8 +201,9 @@ fun PlayerScreen(
                     SpeedChip(speed = uiState.speed, onClick = viewModel::cycleSpeed)
                 }
 
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(Spacing.xl))
                 TickerTape(track = track)
+                Spacer(Modifier.height(Spacing.xxl))
             }
         }
         AnimatedVisibility(
@@ -211,21 +213,6 @@ fun PlayerScreen(
             modifier = Modifier.align(Alignment.TopCenter).padding(top = Spacing.xxl),
         ) {
             VolumeIndicator(uiState.volume)
-        }
-        if (settingsOpen) {
-            AudioSettingsSheet(
-                crossfadeMs = uiState.crossfadeDurationMs,
-                onDismiss = { settingsOpen = false },
-                onCrossfade = viewModel::setCrossfadeDuration,
-                onEq = {
-                    settingsOpen = false
-                    navController.navigate(Screen.Eq.route)
-                },
-                onSleep = {
-                    settingsOpen = false
-                    navController.navigate(Screen.SleepTimer.route)
-                },
-            )
         }
     }
 }
@@ -249,49 +236,6 @@ private fun SpeedChip(
             )
             .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
     )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AudioSettingsSheet(
-    crossfadeMs: Int,
-    onDismiss: () -> Unit,
-    onCrossfade: (Int) -> Unit,
-    onEq: () -> Unit,
-    onSleep: () -> Unit,
-) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = BgBase) {
-        Column(Modifier.padding(Spacing.lg)) {
-            Text("Audio settings", style = SylphyType.Heading, color = FgPrimary)
-            Spacer(Modifier.height(Spacing.md))
-            SettingsRow("Crossfade", "${crossfadeMs / 1000}s") {
-                val next = when (crossfadeMs) {
-                    0 -> 3000
-                    3000 -> 6000
-                    6000 -> 12000
-                    else -> 0
-                }
-                onCrossfade(next)
-            }
-            SettingsRow("EQ", ">", onEq)
-            SettingsRow("Sleep timer", ">", onSleep)
-            Spacer(Modifier.height(Spacing.lg))
-        }
-    }
-}
-
-@Composable
-private fun SettingsRow(label: String, value: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = Spacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, style = SylphyType.Body, color = FgPrimary, modifier = Modifier.weight(1f))
-        Text(value, style = SylphyType.Code, color = FgMuted)
-    }
 }
 
 @Composable

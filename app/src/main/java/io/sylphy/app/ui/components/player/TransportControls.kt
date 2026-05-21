@@ -93,8 +93,8 @@ private fun PlayButton(
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.94f else 1f,
-        animationSpec = spring(dampingRatio = 1f, stiffness = 700f),
+        targetValue = if (pressed) 0.92f else 1f,
+        animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
         label = "play_button_scale",
     )
 
@@ -123,7 +123,7 @@ private fun PlayButton(
             painter = painterResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play),
             contentDescription = if (isPlaying) "Pause" else "Play",
             tint = if (isPlaying) FgPrimary else ActiveForeground,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(32.dp),
         )
     }
 }
@@ -135,20 +135,28 @@ private fun TransportIconButton(
     onClick: () -> Unit,
     contentDescription: String,
 ) {
+    val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.88f else 1f,
+        animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
+        label = "transport_icon_scale",
+    )
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
             .size(Layout.transportTapTarget)
-            .background(if (pressed) FgGhost else Color.Transparent, ContainerCorner)
+            .scale(scale)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = onClick,
-            ),
+            ) {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            },
     ) {
         Icon(
             painter = painterResource(icon),
@@ -156,10 +164,10 @@ private fun TransportIconButton(
             tint = if (active) FgPrimary else FgMuted,
             modifier = Modifier.size(Layout.transportIconSize),
         )
-        Spacer(Modifier.height(3.dp))
+        Spacer(Modifier.height(4.dp))
         Box(
             Modifier
-                .size(3.dp)
+                .size(width = 12.dp, height = 2.dp)
                 .background(if (active) FgPrimary else Color.Transparent, CircleShape),
         )
     }
