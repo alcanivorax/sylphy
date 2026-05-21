@@ -93,8 +93,8 @@ private fun PlayButton(
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.92f else 1f,
-        animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
+        targetValue = if (pressed) 0.90f else 1f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 600f),
         label = "play_button_scale",
     )
 
@@ -114,7 +114,7 @@ private fun PlayButton(
                 interactionSource = interactionSource,
                 indication = null,
             ) {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                 onPress()
             },
         contentAlignment = Alignment.Center,
@@ -139,8 +139,8 @@ private fun TransportIconButton(
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.88f else 1f,
-        animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
+        targetValue = if (pressed) 0.85f else 1f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 600f),
         label = "transport_icon_scale",
     )
 
@@ -154,7 +154,7 @@ private fun TransportIconButton(
                 interactionSource = interactionSource,
                 indication = null,
             ) {
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                 onClick()
             },
     ) {

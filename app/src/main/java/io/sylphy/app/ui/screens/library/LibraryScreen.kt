@@ -16,6 +16,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -62,8 +63,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -464,27 +468,64 @@ private fun SearchResultsList(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun TrackRow(track: Track, onTrackClick: (Track) -> Unit, onTrackLongClick: (Track) -> Unit = {}) {
+internal fun TrackRow(
+    track: Track,
+    onTrackClick: (Track) -> Unit,
+    onTrackLongClick: (Track) -> Unit = {},
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (pressed) 0.98f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = 1f,
+            stiffness = 800f,
+        ),
+        label = "track_row_scale",
+    )
+    val haptic = LocalHapticFeedback.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(72.dp)
+            .scale(scale)
             .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 indication = null,
-                onClick = { onTrackClick(track) },
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onTrackClick(track)
+                },
                 onLongClick = { onTrackLongClick(track) },
             )
-            .padding(vertical = Spacing.sm),
+            .padding(vertical = Spacing.sm, horizontal = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AlbumArtwork(track.artworkPath, size = 48.dp)
         Spacer(Modifier.width(Spacing.md))
         Column(Modifier.weight(1f)) {
-            Text(track.title, style = SylphyType.Code, color = FgPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(track.artist, style = SylphyType.BodySmall, color = FgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                track.title,
+                style = SylphyType.Code,
+                color = FgPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                track.artist,
+                style = SylphyType.BodySmall,
+                color = FgMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
-        Text(track.durationMs.toMmSs(), style = SylphyType.CodeSmall, color = FgGhost)
+        Text(
+            track.durationMs.toMmSs(),
+            style = SylphyType.CodeSmall,
+            color = FgGhost,
+            modifier = Modifier.padding(start = Spacing.sm),
+        )
     }
     SylphyDivider()
 }

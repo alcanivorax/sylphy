@@ -1,5 +1,8 @@
 package io.sylphy.app.ui.components.player
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -22,8 +25,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import io.sylphy.app.core.util.toMmSs
 import io.sylphy.app.ui.theme.FgMuted
@@ -43,13 +49,28 @@ fun SylphySeekBar(
     waveformData: List<Float>? = null,
     onSeek: (Long) -> Unit,
 ) {
+    val haptic = LocalHapticFeedback.current
     val progress = if (durationMs > 0) positionMs.toFloat() / durationMs else 0f
     var localProgress by remember { mutableFloatStateOf(progress) }
     var isDragging by remember { mutableStateOf(false) }
     val displayProgress = if (isDragging) localProgress else progress
     val displayPositionMs = (displayProgress * durationMs).toLong()
+    
+    // Animate playhead position smoothly
+    val animatedProgress = remember { Animatable(progress) }
+    LaunchedEffect(progress, isDragging) {
+        if (!isDragging) {
+            animatedProgress.animateTo(
+                targetValue = progress,
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
+            )
+        } else {
+            animatedProgress.snapTo(localProgress)
+        }
+    }
+    
     val dotRadius = with(LocalDensity.current) { 
-        (if (isDragging) Layout.seekDotRadius * 1.5f else Layout.seekDotRadius).toPx() 
+        (if (isDragging) Layout.seekDotRadius * 1.8f else Layout.seekDotRadius).toPx() 
     }
     
     // Capture theme colors in composable scope
@@ -58,10 +79,6 @@ fun SylphySeekBar(
     val colorPlayhead = ProgressPlayhead
     val colorMuted = FgMuted
     val colorPrimary = FgPrimary
-
-    LaunchedEffect(progress) {
-        if (!isDragging) localProgress = progress
-    }
 
     Column(modifier = modifier) {
         Box(
@@ -72,6 +89,7 @@ fun SylphySeekBar(
                     detectTapGestures { offset ->
                         val fraction = (offset.x / size.width).coerceIn(0f, 1f)
                         localProgress = fraction
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onSeek((fraction * durationMs).toLong())
                     }
                 }
@@ -80,6 +98,7 @@ fun SylphySeekBar(
                         onDragStart = { offset ->
                             isDragging = true
                             localProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         },
                         onDragEnd = {
                             onSeek((localProgress * durationMs).toLong())
@@ -95,7 +114,7 @@ fun SylphySeekBar(
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val y = center.y
-                val splitX = displayProgress * size.width
+                val splitX = animatedProgress.value * size.width
                 val baseLineHeight = 3.dp.toPx()
 
                 if (waveformData != null && waveformData.isNotEmpty()) {
@@ -125,14 +144,14 @@ fun SylphySeekBar(
                         start = Offset(0f, y),
                         end = Offset(size.width, y),
                         strokeWidth = baseLineHeight,
-                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        cap = StrokeCap.Round
                     )
                     drawLine(
                         color = colorFilled,
                         start = Offset(0f, y),
                         end = Offset(splitX, y),
                         strokeWidth = baseLineHeight,
-                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        cap = StrokeCap.Round
                     )
                 }
 

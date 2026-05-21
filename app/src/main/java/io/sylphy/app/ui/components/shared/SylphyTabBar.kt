@@ -1,11 +1,13 @@
 package io.sylphy.app.ui.components.shared
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -23,8 +25,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntOffset
 import io.sylphy.app.ui.theme.ActiveBackground
 import io.sylphy.app.ui.theme.ActiveForeground
@@ -46,6 +51,8 @@ fun SylphyTabBar(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val haptic = LocalHapticFeedback.current
+    
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
@@ -55,16 +62,16 @@ fun SylphyTabBar(
     ) {
         val tabWidth = maxWidth / tabs.size
         val tabWidthPx = with(LocalDensity.current) { tabWidth.toPx() }
-        val pillOffset = remember { Animatable(selectedIndex * tabWidthPx) }
+        val pillOffset = remember { Animatable(0f) }
 
-        LaunchedEffect(selectedIndex) {
+        LaunchedEffect(selectedIndex, tabWidthPx) {
             pillOffset.animateTo(
                 targetValue = selectedIndex * tabWidthPx,
-                animationSpec = tween(Duration.Slow, easing = SylphyEasing.Standard),
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
             )
         }
 
-        // Sliding inverted pill
+        // Sliding inverted pill with smooth spring animation
         Box(
             modifier = Modifier
                 .width(tabWidth - Spacing.md)
@@ -83,9 +90,16 @@ fun SylphyTabBar(
         Row(modifier = Modifier.fillMaxSize()) {
             tabs.forEachIndexed { i, label ->
                 val active = i == selectedIndex
+                val interactionSource = remember { MutableInteractionSource() }
+                val pressed by interactionSource.collectIsPressedAsState()
+                val scale by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (pressed) 0.92f else 1f,
+                    animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
+                    label = "tab_scale"
+                )
                 val textColor by androidx.compose.animation.animateColorAsState(
                     targetValue = if (active) ActiveForeground else FgMuted,
-                    animationSpec = tween(Duration.Normal),
+                    animationSpec = tween(Duration.Fast),
                     label = "tab_text_color"
                 )
 
@@ -94,10 +108,14 @@ fun SylphyTabBar(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
+                        .scale(scale)
                         .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
+                            interactionSource = interactionSource,
                             indication = null,
-                        ) { onTabSelected(i) },
+                        ) { 
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onTabSelected(i) 
+                        },
                 ) {
                     Text(
                         text = label,

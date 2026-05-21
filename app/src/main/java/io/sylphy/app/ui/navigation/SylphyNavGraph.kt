@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -117,19 +118,19 @@ fun SylphyNavGraph(
                 .background(BgBase),
             enterTransition = {
                 fadeIn(tween(Duration.Slow, easing = SylphyEasing.Enter)) +
-                        slideInHorizontally(tween(Duration.Slow, easing = SylphyEasing.Standard)) { it / 8 }
+                        slideInHorizontally(tween(Duration.Slow, easing = SylphyEasing.Standard)) { it / 10 }
             },
             exitTransition = {
                 fadeOut(tween(Duration.Normal, easing = SylphyEasing.Exit)) +
-                        slideOutHorizontally(tween(Duration.Normal, easing = SylphyEasing.Standard)) { -it / 12 }
+                        slideOutHorizontally(tween(Duration.Normal, easing = SylphyEasing.Standard)) { -it / 10 }
             },
             popEnterTransition = {
                 fadeIn(tween(Duration.Slow, easing = SylphyEasing.Enter)) +
-                        slideInHorizontally(tween(Duration.Slow, easing = SylphyEasing.Standard)) { -it / 8 }
+                        slideInHorizontally(tween(Duration.Slow, easing = SylphyEasing.Standard)) { -it / 10 }
             },
             popExitTransition = {
                 fadeOut(tween(Duration.Normal, easing = SylphyEasing.Exit)) +
-                        slideOutHorizontally(tween(Duration.Normal, easing = SylphyEasing.Standard)) { it / 12 }
+                        slideOutHorizontally(tween(Duration.Normal, easing = SylphyEasing.Standard)) { it / 10 }
             },
         ) {
             composable(Screen.Player.route)  { PlayerScreen(navController) }

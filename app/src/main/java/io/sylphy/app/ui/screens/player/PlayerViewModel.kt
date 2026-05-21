@@ -123,8 +123,10 @@ class PlayerViewModel @Inject constructor(
             while (true) {
                 if (player.isPlaying) {
                     syncPlaybackState()
+                    delay(100)
+                } else {
+                    delay(500)
                 }
-                delay(100)
             }
         }
     }
