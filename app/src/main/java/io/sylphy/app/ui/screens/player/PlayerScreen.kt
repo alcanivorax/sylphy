@@ -1,14 +1,18 @@
 package io.sylphy.app.ui.screens.player
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,7 +31,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,16 +40,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import io.sylphy.app.core.util.toMmSs
-import io.sylphy.app.ui.components.player.AlbumArtwork
-import io.sylphy.app.ui.components.player.ProgressRing
+import io.sylphy.app.ui.components.player.AmbientBackgroundGlow
+import io.sylphy.app.ui.components.player.CDDisc
 import io.sylphy.app.ui.components.player.SylphySeekBar
 import io.sylphy.app.ui.components.player.TickerTape
 import io.sylphy.app.ui.components.player.TrackInfoSection
@@ -94,6 +100,12 @@ fun PlayerScreen(
             return@Box
         }
 
+        // Ambient background glow from album art
+        AmbientBackgroundGlow(
+            artworkPath = track.artworkPath,
+            intensity = 0.12f,
+        )
+
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
@@ -102,7 +114,7 @@ fun PlayerScreen(
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         while (true) {
-                            val event = awaitPointerEvent() // Defaults to Main pass
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
                             if (event.changes.size == 2 && event.changes.all { it.pressed }) {
                                 val dy = event.changes.map { it.position.y - it.previousPosition.y }.average().toFloat()
                                 if (dy != 0f) {
@@ -127,48 +139,54 @@ fun PlayerScreen(
             }
             val heightBoundArtSize = (maxHeight - 380.dp).coerceIn(168.dp, Layout.albumArtSize)
             val artSize = minOf(widthBoundArtSize, heightBoundArtSize)
-            val progress by animateFloatAsState(
-                targetValue = if (uiState.duration > 0L) {
-                    (uiState.position.toFloat() / uiState.duration).coerceIn(0f, 1f)
-                } else {
-                    0f
-                },
-                animationSpec = tween(Duration.Normal, easing = SylphyEasing.Standard),
-                label = "player_progress",
-            )
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Top header space
+                // Top header - minimal
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Left side: empty for balance
+                    Spacer(Modifier.size(1.dp))
+                    
+                    // Right side: Settings
                     IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings", tint = FgPrimary)
                     }
                 }
                 
-                TrackInfoSection(track = track)
-
                 Spacer(Modifier.height(Spacing.lg))
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(artSize + Spacing.md),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    ProgressRing(size = artSize + Spacing.md, progress = progress)
-                    AlbumArtwork(artworkPath = track.artworkPath, size = artSize)
+                // Track info - above CD for better hierarchy
+                AnimatedContent(
+                    targetState = track,
+                    transitionSpec = {
+                        fadeIn(tween(Duration.Normal, easing = SylphyEasing.Enter)) togetherWith
+                            fadeOut(tween(Duration.Fast, easing = SylphyEasing.Exit))
+                    },
+                    label = "track_info",
+                ) { currentTrack ->
+                    TrackInfoSection(track = currentTrack)
                 }
 
-                Spacer(Modifier.height(Spacing.lg))
+                Spacer(Modifier.height(Spacing.xl))
 
+                // CD Disc - the centerpiece
+                CDDisc(
+                    artworkPath = track.artworkPath,
+                    isPlaying = uiState.isPlaying,
+                    discSize = artSize,
+                )
+
+                Spacer(Modifier.height(Spacing.xl))
+
+                // Progress ring integrated around CD (now part of CDDisc, but we keep seek bar below)
                 SylphySeekBar(
                     positionMs = uiState.position,
                     durationMs = uiState.duration,
@@ -178,6 +196,7 @@ fun PlayerScreen(
 
                 Spacer(Modifier.height(Spacing.lg))
 
+                // Transport controls - minimal
                 TransportControls(
                     isPlaying = uiState.isPlaying,
                     shuffleEnabled = uiState.shuffleEnabled,
@@ -191,6 +210,7 @@ fun PlayerScreen(
 
                 Spacer(Modifier.height(Spacing.sm))
 
+                // Bottom row: Sleep timer + Speed chip
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
@@ -210,10 +230,15 @@ fun PlayerScreen(
                 }
 
                 Spacer(Modifier.height(Spacing.xl))
+                
+                // Ticker tape - secondary metadata, kept but minimal
                 TickerTape(track = track)
+                
                 Spacer(Modifier.height(Spacing.xxl))
             }
         }
+        
+        // Volume indicator overlay
         AnimatedVisibility(
             visible = volumeVisible,
             enter = fadeIn(tween(Duration.Fast)),
@@ -231,12 +256,20 @@ private fun SpeedChip(
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val scale by animateFloatAsState(
+        targetValue = if (interactionSource.collectIsPressedAsState().value) 0.95f else 1f,
+        animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
+        label = "speed_chip_scale",
+    )
+    
     Text(
         text = "${speed}x",
         style = SylphyType.CodeSmall,
         color = FgPrimary,
         modifier = Modifier
+            .scale(scale)
             .border(Layout.borderThin, BorderDefault, ChipCorner)
+            .clip(RoundedCornerShape(6.dp))
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
