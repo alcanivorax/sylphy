@@ -28,10 +28,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.sylphy.app.ui.theme.BgBase
+import io.sylphy.app.ui.theme.FgGhost
 import io.sylphy.app.ui.theme.FgMuted
 import io.sylphy.app.ui.theme.FgPrimary
 import io.sylphy.app.ui.theme.Layout
-import io.sylphy.app.ui.theme.Separator
 import io.sylphy.app.ui.theme.SharpCorner
 import io.sylphy.app.ui.theme.Spacing
 import io.sylphy.app.ui.theme.SylphyType
@@ -40,7 +40,7 @@ import io.sylphy.app.ui.theme.SylphyType
 fun SylphyDivider(modifier: Modifier = Modifier) {
     HorizontalDivider(
         modifier = modifier,
-        color = Separator,
+        color = FgGhost,
         thickness = Layout.borderThin,
     )
 }

@@ -10,6 +10,7 @@ sealed class Screen(val route: String) {
     object SleepTimer : Screen("sleep_timer")
     object Stats   : Screen("stats")
     object Ambient : Screen("ambient")
+    object Settings : Screen("settings")
 
     object AlbumDetail : Screen("album/{albumId}") {
         const val ROUTE = "album/{albumId}"

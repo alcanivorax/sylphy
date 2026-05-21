@@ -32,7 +32,6 @@ import io.sylphy.app.ui.theme.FgGhost
 import io.sylphy.app.ui.theme.FgMuted
 import io.sylphy.app.ui.theme.FgPrimary
 import io.sylphy.app.ui.theme.FgSubtle
-import io.sylphy.app.ui.theme.Separator
 import io.sylphy.app.ui.theme.Spacing
 import io.sylphy.app.ui.theme.SylphyType
 

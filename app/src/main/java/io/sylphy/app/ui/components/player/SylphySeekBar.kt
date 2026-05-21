@@ -51,6 +51,13 @@ fun SylphySeekBar(
     val dotRadius = with(LocalDensity.current) { 
         (if (isDragging) Layout.seekDotRadius * 1.5f else Layout.seekDotRadius).toPx() 
     }
+    
+    // Capture theme colors in composable scope
+    val colorEmpty = ProgressEmpty
+    val colorFilled = ProgressFilled
+    val colorPlayhead = ProgressPlayhead
+    val colorMuted = FgMuted
+    val colorPrimary = FgPrimary
 
     LaunchedEffect(progress) {
         if (!isDragging) localProgress = progress
@@ -103,7 +110,7 @@ fun SylphySeekBar(
                         val sampleIdx = (i.toFloat() / maxBars * waveformData.size).toInt().coerceIn(0, waveformData.size - 1)
                         val amplitude = waveformData[sampleIdx]
                         val h = (baseLineHeight + amplitude * 16.dp.toPx()).coerceIn(baseLineHeight, 20.dp.toPx())
-                        val color = if (x < splitX) ProgressFilled else ProgressEmpty
+                        val color = if (x < splitX) colorFilled else colorEmpty
                         
                         drawRoundRect(
                             color = color,
@@ -114,14 +121,14 @@ fun SylphySeekBar(
                     }
                 } else {
                     drawLine(
-                        color = ProgressEmpty,
+                        color = colorEmpty,
                         start = Offset(0f, y),
                         end = Offset(size.width, y),
                         strokeWidth = baseLineHeight,
                         cap = androidx.compose.ui.graphics.StrokeCap.Round
                     )
                     drawLine(
-                        color = ProgressFilled,
+                        color = colorFilled,
                         start = Offset(0f, y),
                         end = Offset(splitX, y),
                         strokeWidth = baseLineHeight,
@@ -130,7 +137,7 @@ fun SylphySeekBar(
                 }
 
                 drawCircle(
-                    color = ProgressPlayhead,
+                    color = colorPlayhead,
                     radius = dotRadius,
                     center = Offset(splitX, y),
                 )
@@ -146,12 +153,12 @@ fun SylphySeekBar(
             Text(
                 text = displayPositionMs.toMmSs(),
                 style = SylphyType.CodeSmall,
-                color = if (isDragging) FgPrimary else FgMuted,
+                color = if (isDragging) colorPrimary else colorMuted,
             )
             Text(
                 text = "-${(durationMs - displayPositionMs).coerceAtLeast(0L).toMmSs()}",
                 style = SylphyType.CodeSmall,
-                color = if (isDragging) FgPrimary else FgMuted,
+                color = if (isDragging) colorPrimary else colorMuted,
             )
         }
     }

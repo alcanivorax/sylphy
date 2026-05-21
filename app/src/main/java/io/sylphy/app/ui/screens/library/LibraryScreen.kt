@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QueryStats
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -141,6 +142,9 @@ fun LibraryScreen(
             Text("LIBRARY", style = SylphyType.Display, color = FgPrimary, modifier = Modifier.weight(1f))
             IconButton(onClick = { navController.navigate(Screen.Stats.route) }) {
                 Icon(Icons.Default.QueryStats, contentDescription = "Stats", tint = FgPrimary)
+            }
+            IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
+                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = FgPrimary)
             }
             SylphyButton(
                 text = if (hasMediaPermission) "Scan" else "Permission",

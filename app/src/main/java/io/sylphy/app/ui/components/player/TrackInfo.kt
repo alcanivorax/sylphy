@@ -22,9 +22,11 @@ import io.sylphy.app.ui.theme.Duration
 import io.sylphy.app.ui.theme.FgMuted
 import io.sylphy.app.ui.theme.FgPrimary
 import io.sylphy.app.ui.theme.FgSecondary
+import io.sylphy.app.ui.theme.NothingRed
 import io.sylphy.app.ui.theme.Spacing
 import io.sylphy.app.ui.theme.SylphyEasing
 import io.sylphy.app.ui.theme.SylphyType
+import androidx.compose.material3.MaterialTheme
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -32,6 +34,8 @@ fun TrackInfoSection(
     track: Track?,
     modifier: Modifier = Modifier,
 ) {
+    val isNothingOS = MaterialTheme.colorScheme.primary == NothingRed
+
     Column(modifier = modifier.fillMaxWidth()) {
         AnimatedContent(
             targetState = track?.title ?: "\u2014",
@@ -42,7 +46,7 @@ fun TrackInfoSection(
             label = "track_title",
         ) { title ->
             Text(
-                text = title,
+                text = if (isNothingOS) title.uppercase() else title,
                 style = SylphyType.DisplayLarge,
                 color = if (track == null) FgMuted else FgPrimary,
                 maxLines = 1,

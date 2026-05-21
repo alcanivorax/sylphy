@@ -19,8 +19,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.Text
 import androidx.compose.ui.unit.dp
 import io.sylphy.app.ui.theme.ActiveBackground
+import io.sylphy.app.ui.theme.ActiveForeground
 import io.sylphy.app.ui.theme.Layout
-import io.sylphy.app.ui.theme.Black
 import io.sylphy.app.ui.theme.BorderDefault
 import io.sylphy.app.ui.theme.ContainerCorner
 import io.sylphy.app.ui.theme.Duration
@@ -48,7 +48,7 @@ fun SylphyButton(
         ButtonVariant.Outline -> androidx.compose.ui.graphics.Color.Transparent
     }
     val textColor = when (variant) {
-        ButtonVariant.Solid -> Black
+        ButtonVariant.Solid -> ActiveForeground
         ButtonVariant.Outline -> FgPrimary
     }
 

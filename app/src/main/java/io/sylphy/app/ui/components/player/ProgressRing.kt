@@ -26,6 +26,11 @@ fun ProgressRing(
 ) {
     val strokePx = with(LocalDensity.current) { strokeWidth.toPx() }
     val dotRadius = with(LocalDensity.current) { Layout.seekDotRadius.toPx() }
+    
+    // Capture colors outside the DrawScope
+    val colorEmpty = ProgressEmpty
+    val colorFilled = ProgressFilled
+    val colorPlayhead = ProgressPlayhead
 
     Canvas(modifier = modifier.size(size)) {
         val diameter = size.toPx() - strokePx
@@ -35,7 +40,7 @@ fun ProgressRing(
         val sweep = 360f
 
         drawArc(
-            color = ProgressEmpty,
+            color = colorEmpty,
             startAngle = startAngle,
             sweepAngle = sweep,
             useCenter = false,
@@ -46,7 +51,7 @@ fun ProgressRing(
 
         if (progress > 0f) {
             drawArc(
-                color = ProgressFilled,
+                color = colorFilled,
                 startAngle = startAngle,
                 sweepAngle = sweep * progress,
                 useCenter = false,
@@ -60,6 +65,6 @@ fun ProgressRing(
         val radius = diameter / 2f
         val cx = center.x + radius * cos(angleRad).toFloat()
         val cy = center.y + radius * sin(angleRad).toFloat()
-        drawCircle(color = ProgressPlayhead, radius = dotRadius, center = Offset(cx, cy))
+        drawCircle(color = colorPlayhead, radius = dotRadius, center = Offset(cx, cy))
     }
 }

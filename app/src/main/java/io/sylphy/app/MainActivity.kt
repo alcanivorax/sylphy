@@ -12,9 +12,12 @@ import android.os.VibratorManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import dagger.hilt.android.AndroidEntryPoint
 import io.sylphy.app.core.di.MediaControllerProvider
+import io.sylphy.app.data.local.datastore.SettingsDataStore
+import io.sylphy.app.data.model.ThemeMode
 import io.sylphy.app.ui.navigation.SylphyNavGraph
 import io.sylphy.app.ui.theme.SylphyTheme
 import javax.inject.Inject
@@ -23,6 +26,7 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     @Inject lateinit var mediaControllerProvider: MediaControllerProvider
+    @Inject lateinit var settingsDataStore: SettingsDataStore
     private var sensorManager: SensorManager? = null
     private var accelerometer: Sensor? = null
     private var lastShakeMs = 0L
@@ -53,7 +57,8 @@ class MainActivity : ComponentActivity() {
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         setContent {
-            SylphyTheme {
+            val settings by settingsDataStore.settings.collectAsState(initial = null)
+            SylphyTheme(mode = settings?.themeMode ?: ThemeMode.MONOCHROME_DARK) {
                 SylphyNavGraph()
             }
         }

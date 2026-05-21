@@ -49,6 +49,7 @@ import io.sylphy.app.ui.screens.library.PlaylistDetailScreen
 import io.sylphy.app.ui.screens.player.PlayerScreen
 import io.sylphy.app.ui.screens.queue.QueueScreen
 import io.sylphy.app.ui.screens.settings.EqScreen
+import io.sylphy.app.ui.screens.settings.SettingsScreen
 import io.sylphy.app.ui.screens.settings.SleepTimerScreen
 import io.sylphy.app.ui.screens.stats.StatsScreen
 import io.sylphy.app.ui.theme.BgBase
@@ -154,6 +155,7 @@ fun SylphyNavGraph(
             composable(Screen.SleepTimer.route) { SleepTimerScreen() }
             composable(Screen.Stats.route)      { StatsScreen() }
             composable(Screen.Ambient.route)    { AmbientScreen(navController) }
+            composable(Screen.Settings.route)   { SettingsScreen(navController) }
         }
     }
 }

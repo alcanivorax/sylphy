@@ -14,6 +14,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.sylphy.app.data.model.Settings
+import io.sylphy.app.data.model.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -29,6 +30,7 @@ class SettingsDataStore @Inject constructor(
     private val floatListType = object : TypeToken<List<Float>>() {}.type
 
     private object Keys {
+        val THEME_MODE         = stringPreferencesKey("theme_mode")
         val CROSSFADE_MS       = intPreferencesKey("crossfade_ms")
         val PLAYBACK_SPEED     = floatPreferencesKey("playback_speed")
         val GAPLESS_ENABLED    = booleanPreferencesKey("gapless_enabled")
@@ -42,6 +44,7 @@ class SettingsDataStore @Inject constructor(
 
     val settings: Flow<Settings> = context.dataStore.data.map { prefs ->
         Settings(
+            themeMode            = prefs[Keys.THEME_MODE]?.let { ThemeMode.valueOf(it) } ?: ThemeMode.MONOCHROME_DARK,
             crossfadeDurationMs  = prefs[Keys.CROSSFADE_MS]    ?: 0,
             playbackSpeed        = prefs[Keys.PLAYBACK_SPEED]  ?: 1.0f,
             gaplessEnabled       = prefs[Keys.GAPLESS_ENABLED] ?: true,
@@ -52,6 +55,10 @@ class SettingsDataStore @Inject constructor(
             sleepTimerEndTime    = prefs[Keys.SLEEP_TIMER_END],
             ambientModeEnabled   = prefs[Keys.AMBIENT_MODE]    ?: true,
         )
+    }
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { it[Keys.THEME_MODE] = mode.name }
     }
 
     suspend fun setCrossfadeDuration(ms: Int) {

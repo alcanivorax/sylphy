@@ -143,7 +143,15 @@ fun PlayerScreen(
                     .verticalScroll(rememberScrollState()),
             ) {
                 // Top header space
-                Spacer(Modifier.height(Spacing.md))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = FgPrimary)
+                    }
+                }
                 
                 TrackInfoSection(track = track)
 
