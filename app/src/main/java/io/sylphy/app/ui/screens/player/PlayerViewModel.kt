@@ -88,6 +88,19 @@ class PlayerViewModel @Inject constructor(
         player.shuffleModeEnabled = !player.shuffleModeEnabled
     }
 
+    fun toggleFavorite() {
+        val track = _uiState.value.activeTrack ?: return
+        viewModelScope.launch {
+            val nextFavorite = !track.isFavorite
+            trackRepository.setFavorite(track.id, nextFavorite)
+            _uiState.update { 
+                if (it.activeTrack?.id == track.id) {
+                    it.copy(activeTrack = it.activeTrack.copy(isFavorite = nextFavorite))
+                } else it
+            }
+        }
+    }
+
     fun cycleRepeat() {
         player.repeatMode = when (player.repeatMode) {
             Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL

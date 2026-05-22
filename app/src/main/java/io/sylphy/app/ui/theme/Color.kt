@@ -6,6 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import io.sylphy.app.data.model.ThemeMode
 
 // ─── Base Palette ───────────────────────────────────────────────────────────
@@ -124,3 +125,21 @@ val ActiveForeground: Color @Composable get() = MaterialTheme.colorScheme.onPrim
 val ProgressFilled: Color @Composable get() = MaterialTheme.colorScheme.primary
 val ProgressEmpty: Color @Composable get() = MaterialTheme.colorScheme.outlineVariant
 val ProgressPlayhead: Color @Composable get() = MaterialTheme.colorScheme.primary
+
+// ─── Player Specific Tokens ──────────────────────────────────────────────────
+
+object PlayerTheme {
+    val Black: Color @Composable get() = MaterialTheme.colorScheme.background
+    val OffBlack: Color @Composable get() = if (isLight) Color(0xFFF0F0F0) else Color(0xFF0D0D0D)
+    val Surface: Color @Composable get() = MaterialTheme.colorScheme.surface
+    val Surface2: Color @Composable get() = MaterialTheme.colorScheme.surfaceVariant
+    val Border: Color @Composable get() = MaterialTheme.colorScheme.outline
+    val Muted: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+    val White: Color @Composable get() = MaterialTheme.colorScheme.onBackground
+    val WhiteDim: Color @Composable get() = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
+    val Red: Color @Composable get() = if (isNothingOS) Color(0xFFFF3B3B) else MaterialTheme.colorScheme.primary
+    val RedDim: Color @Composable get() = Red.copy(alpha = 0.18f)
+
+    private val isLight: Boolean @Composable get() = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    private val isNothingOS: Boolean @Composable get() = MaterialTheme.colorScheme.primary == NothingRed
+}

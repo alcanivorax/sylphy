@@ -55,6 +55,9 @@ coroutines              = "1.10.2"
 # ── Coil (Image loading for album artwork) ───────────────────────────────────
 coil                    = "2.7.0"
 
+# ── Accompanist ──────────────────────────────────────────────────────────────
+accompanist             = "0.34.0"
+
 # ── Timber (Logging) ──────────────────────────────────────────────────────────
 timber                  = "5.0.1"
 
@@ -132,6 +135,9 @@ kotlinx-coroutines-guava   = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 # ── Coil ──────────────────────────────────────────────────────────────────────
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+
+# ── Accompanist ──────────────────────────────────────────────────────────────
+accompanist-systemuicontroller = { group = "com.google.accompanist", name = "accompanist-systemuicontroller", version.ref = "accompanist" }
 
 # ── Timber ────────────────────────────────────────────────────────────────────
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }

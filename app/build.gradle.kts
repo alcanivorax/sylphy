@@ -152,6 +152,9 @@ dependencies {
     // Handles content:// URIs, file paths, and HTTP URLs with built-in disk cache.
     implementation(libs.coil.compose)
 
+    // ── Accompanist ───────────────────────────────────────────────────────────
+    implementation(libs.accompanist.systemuicontroller)
+
     // ── Timber (Structured logging) ───────────────────────────────────────────
     implementation(libs.timber)
 

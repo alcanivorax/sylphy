@@ -22,6 +22,9 @@ import androidx.compose.ui.unit.sp
 val GeistMono = FontFamily.Monospace
 val GeistSans = FontFamily.SansSerif
 
+val SpaceMono = FontFamily.Monospace
+val DmSans = FontFamily.SansSerif
+
 object SylphyType {
 
     val DisplayLarge = TextStyle(
@@ -43,10 +46,10 @@ object SylphyType {
     // Screen headers, tab labels, button text
     val Heading = TextStyle(
         fontFamily    = GeistMono,
-        fontWeight    = FontWeight.Medium,
-        fontSize      = 13.sp,
-        lineHeight    = 18.sp,
-        letterSpacing = 0.8.sp,
+        fontWeight    = FontWeight.Normal,
+        fontSize      = 11.sp,
+        lineHeight    = 16.sp,
+        letterSpacing = 2.2.sp,
     )
 
     // Timestamps, durations, counters
@@ -86,9 +89,9 @@ object SylphyType {
     val Body = TextStyle(
         fontFamily    = GeistSans,
         fontWeight    = FontWeight.Normal,
-        fontSize      = 14.sp,
-        lineHeight    = 20.sp,
-        letterSpacing = (-0.1).sp,
+        fontSize      = 15.sp,
+        lineHeight    = 22.sp,
+        letterSpacing = (-0.2).sp,
     )
 
     val BodySmall = TextStyle(

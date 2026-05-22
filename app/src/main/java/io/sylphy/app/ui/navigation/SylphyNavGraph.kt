@@ -24,7 +24,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,14 +39,19 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.sylphy.app.data.model.ThemeMode
 import io.sylphy.app.ui.components.shared.SwipePager
 import io.sylphy.app.ui.components.shared.SylphyTabBar
+import io.sylphy.app.ui.screens.player.PlayerViewModel
 import io.sylphy.app.ui.screens.ambient.AmbientScreen
 import io.sylphy.app.ui.screens.library.AlbumDetailScreen
 import io.sylphy.app.ui.screens.library.ArtistDetailScreen
 import io.sylphy.app.ui.screens.library.LibraryScreen
 import io.sylphy.app.ui.screens.library.PlaylistDetailScreen
+import io.sylphy.app.ui.screens.player.BottomNav
+import io.sylphy.app.ui.screens.player.BottomNavTab
 import io.sylphy.app.ui.screens.player.PlayerScreen
 import io.sylphy.app.ui.screens.queue.QueueScreen
 import io.sylphy.app.ui.screens.settings.EqScreen
@@ -56,18 +60,21 @@ import io.sylphy.app.ui.screens.settings.SleepTimerScreen
 import io.sylphy.app.ui.screens.stats.StatsScreen
 import io.sylphy.app.ui.theme.BgBase
 import io.sylphy.app.ui.theme.Duration
-import io.sylphy.app.ui.theme.NothingRed
 import io.sylphy.app.ui.theme.OLEDBlack
 import io.sylphy.app.ui.theme.SylphyEasing
 import kotlinx.coroutines.delay
 
 private val topLevelRoutes = listOf(
+    Screen.Library.route,
     Screen.Player.route,
     Screen.Queue.route,
-    Screen.Library.route,
 )
 
-private val tabs = listOf("Player", "Queue", "Library")
+private val tabs = listOf("Library", "Player", "Queue")
+
+private const val PAGE_LIBRARY = 0
+private const val PAGE_PLAYER = 1
+private const val PAGE_QUEUE = 2
 
 @Composable
 fun SylphyNavGraph(
@@ -79,7 +86,11 @@ fun SylphyNavGraph(
     val showTabBar = currentRoute in topLevelRoutes
     val isNothingOS = themeMode == ThemeMode.NOTHING_OS
 
-    var pagerPage by remember { mutableIntStateOf(0) }
+    var pagerPage by remember { mutableIntStateOf(PAGE_PLAYER) }
+
+    val playerViewModel: PlayerViewModel = hiltViewModel()
+    val playerUiState by playerViewModel.uiState.collectAsStateWithLifecycle()
+    val hasActiveTrack = playerUiState.activeTrack != null
 
     LaunchedEffect(currentRoute) {
         val index = topLevelRoutes.indexOf(currentRoute)
@@ -88,9 +99,16 @@ fun SylphyNavGraph(
         }
     }
 
+    LaunchedEffect(hasActiveTrack, pagerPage) {
+        if (!hasActiveTrack && pagerPage == PAGE_PLAYER) {
+            pagerPage = PAGE_LIBRARY
+        }
+    }
+
     AmbientAutoNavigator(navController, currentRoute)
 
     Scaffold(
+
         modifier = Modifier.pointerInput(Unit) {
             awaitEachGesture {
                 while (true) {
@@ -103,25 +121,39 @@ fun SylphyNavGraph(
         contentWindowInsets = WindowInsets.safeDrawing.only(
             WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
         ),
-        topBar = {
+        bottomBar = {
             if (showTabBar) {
-                SylphyTabBar(
-                    tabs = tabs,
-                    selectedIndex = pagerPage,
-                    onTabSelected = { index ->
-                        pagerPage = index
-                        navController.navigate(topLevelRoutes[index]) {
-                            popUpTo(Screen.Player.route) { saveState = true }
+                BottomNav(
+                    activeTab = when (pagerPage) {
+                        PAGE_LIBRARY -> BottomNavTab.LIBRARY
+                        PAGE_PLAYER -> BottomNavTab.PLAYER
+                        PAGE_QUEUE -> BottomNavTab.QUEUE
+                        else -> BottomNavTab.PLAYER
+                    },
+                    onLibrary = {
+                        pagerPage = PAGE_LIBRARY
+                        navController.navigate(Screen.Library.route) {
+                            popUpTo(Screen.Library.route) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
                     },
-                    isNothingOS = isNothingOS,
-                    modifier = Modifier.windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
-                        ),
-                    ),
+                    onPlayer = {
+                        pagerPage = PAGE_PLAYER
+                        navController.navigate(Screen.Player.route) {
+                            popUpTo(Screen.Library.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onQueue = {
+                        pagerPage = PAGE_QUEUE
+                        navController.navigate(Screen.Queue.route) {
+                            popUpTo(Screen.Library.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
         },
@@ -129,11 +161,11 @@ fun SylphyNavGraph(
         if (showTabBar) {
             SwipePager(
                 pageCount = 3,
-                initialPage = pagerPage,
+                currentPage = pagerPage,
                 onPageChanged = { page ->
                     pagerPage = page
                     navController.navigate(topLevelRoutes[page]) {
-                        popUpTo(Screen.Player.route) { saveState = true }
+                        popUpTo(Screen.Library.route) { saveState = true }
                         launchSingleTop = true
                         restoreState = true
                     }
@@ -144,10 +176,10 @@ fun SylphyNavGraph(
                     .background(if (isNothingOS) OLEDBlack else BgBase),
             ) { page ->
                 when (page) {
-                    0 -> PlayerScreen(navController)
-                    1 -> QueueScreen()
-                    2 -> LibraryScreen(navController)
-                    else -> PlayerScreen(navController)
+                    PAGE_LIBRARY -> LibraryScreen(navController)
+                    PAGE_PLAYER -> PlayerScreen(navController, themeMode = themeMode)
+                    PAGE_QUEUE -> QueueScreen()
+                    else -> PlayerScreen(navController, themeMode = themeMode)
                 }
             }
         } else {
@@ -174,7 +206,7 @@ fun SylphyNavGraph(
                         slideOutHorizontally(tween(Duration.Normal, easing = SylphyEasing.Standard)) { it / 10 }
                 },
             ) {
-                composable(Screen.Player.route) { PlayerScreen(navController) }
+                composable(Screen.Player.route) { PlayerScreen(navController, themeMode = themeMode) }
                 composable(Screen.Queue.route) { QueueScreen() }
                 composable(Screen.Library.route) { LibraryScreen(navController) }
 
