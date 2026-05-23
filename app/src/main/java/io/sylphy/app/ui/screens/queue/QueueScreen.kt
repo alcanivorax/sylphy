@@ -220,7 +220,7 @@ private fun NowPlayingCard(
                     ),
                 )
             }
-            .padding(start = Spacing.sm + Layout.borderThick, end = Spacing.sm, vertical = Spacing.sm),
+            .padding(start = Spacing.sm + Layout.borderThick, end = Spacing.sm, top = Spacing.sm, bottom = Spacing.sm),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

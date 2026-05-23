@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Library — All Themes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:opsz,wght@9..40,300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  min-height: 100vh;
+  background: #131313;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 40px;
+  padding: 48px 32px 64px;
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  flex-wrap: wrap;
+}
+
+/* ─── PHONE SHELL ─── */
+.phone-wrap { display: flex; flex-direction: column; align-items: center; }
+.phone {
+  width: 360px;
+  height: 820px;
+  border-radius: 44px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  flex-shrink: 0;
+}
+.theme-label {
+  margin-top: 18px;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #3a3a3a;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════
+   THEME TOKENS
+═══════════════════════════════════════════ */
+
+/* — Nothing (Red accent) — */
+.nothing {
+  --bg:          #000000;
+  --surface:     #111111;
+  --surface2:    #1a1a1a;
+  --surface3:    #222222;
+  --border:      #242424;
+  --border2:     #2e2e2e;
+  --muted:       #444444;
+  --muted2:      #666666;
+  --fg:          #f0f0f0;
+  --fg-dim:      rgba(240,240,240,0.5);
+  --accent:      #ff3b3b;
+  --accent-dim:  rgba(255,59,59,0.14);
+  --accent-text: #ff3b3b;
+  --search-bg:   #141414;
+  --search-border: #2a2a2a;
+  --tab-active-color: #f0f0f0;
+  --tab-indicator: #ff3b3b;
+  --row-hover:   rgba(255,255,255,0.03);
+  --thumb-border: #1a1a1a;
+  --section-letter: #333333;
+  --play-indicator: #ff3b3b;
+  background: var(--bg);
+  box-shadow: 0 0 0 1px #1c1c1c, 0 48px 100px rgba(0,0,0,0.95), 0 0 80px rgba(255,59,59,0.04);
+}
+
+/* — Obsidian (Dark mono) — */
+.obsidian {
+  --bg:          #0a0a0a;
+  --surface:     #111111;
+  --surface2:    #191919;
+  --surface3:    #202020;
+  --border:      #1e1e1e;
+  --border2:     #282828;
+  --muted:       #3e3e3e;
+  --muted2:      #5e5e5e;
+  --fg:          #e8e8e8;
+  --fg-dim:      rgba(232,232,232,0.45);
+  --accent:      #e8e8e8;
+  --accent-dim:  rgba(232,232,232,0.07);
+  --accent-text: #e8e8e8;
+  --search-bg:   #141414;
+  --search-border: #252525;
+  --tab-active-color: #e8e8e8;
+  --tab-indicator: #e8e8e8;
+  --row-hover:   rgba(255,255,255,0.025);
+  --thumb-border: #111111;
+  --section-letter: #2a2a2a;
+  --play-indicator: #e8e8e8;
+  background: var(--bg);
+  box-shadow: 0 0 0 1px #1a1a1a, 0 48px 100px rgba(0,0,0,0.95);
+}
+
+/* — Chalk (Light mono) — */
+.chalk {
+  --bg:          #f2f0eb;
+  --surface:     #eae7e0;
+  --surface2:    #e0ddd6;
+  --surface3:    #d6d2ca;
+  --border:      #ccc8bf;
+  --border2:     #b8b3a8;
+  --muted:       #a09a92;
+  --muted2:      #7a756e;
+  --fg:          #1a1814;
+  --fg-dim:      rgba(26,24,20,0.4);
+  --accent:      #1a1814;
+  --accent-dim:  rgba(26,24,20,0.07);
+  --accent-text: #1a1814;
+  --search-bg:   #e8e5de;
+  --search-border: #ccc8bf;
+  --tab-active-color: #1a1814;
+  --tab-indicator: #1a1814;
+  --row-hover:   rgba(26,24,20,0.04);
+  --thumb-border: #eae7e0;
+  --section-letter: #ccc8bf;
+  --play-indicator: #1a1814;
+  background: var(--bg);
+  box-shadow: 0 0 0 1px var(--border), 0 48px 100px rgba(26,24,20,0.22), inset 0 0 0 1px rgba(255,255,255,0.55);
+}
+
+/* ═══════════════════════════════════════════
+   STATUS BAR
+═══════════════════════════════════════════ */
+.status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 26px 0;
+  height: 46px;
+  flex-shrink: 0;
+  color: var(--fg);
+}
+.status-time {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.status-icons { display: flex; gap: 5px; align-items: center; }
+
+/* ═══════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════ */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px 0;
+  flex-shrink: 0;
+}
+.header-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--fg);
+  line-height: 1;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted2);
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 3px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.icon-btn:hover { color: var(--fg); }
+.scan-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--muted2);
+  padding: 5px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.scan-btn:hover { color: var(--fg); border-color: var(--fg-dim); }
+
+/* ═══════════════════════════════════════════
+   SEARCH
+═══════════════════════════════════════════ */
+.search-wrap {
+  padding: 14px 22px 0;
+  flex-shrink: 0;
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--search-bg);
+  border: 1px solid var(--search-border);
+  border-radius: 3px;
+  padding: 10px 14px;
+  cursor: text;
+}
+.search-box svg { color: var(--muted2); flex-shrink: 0; }
+.search-box input {
+  background: none;
+  border: none;
+  outline: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--fg);
+  width: 100%;
+}
+.search-box input::placeholder { color: var(--muted2); }
+
+/* ═══════════════════════════════════════════
+   SEGMENT TABS (SONGS / ALBUMS / ARTISTS / PLAYLISTS)
+═══════════════════════════════════════════ */
+.seg-tabs {
+  display: flex;
+  padding: 14px 22px 0;
+  gap: 0;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  margin-top: 2px;
+}
+.seg-tab {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Space Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  padding: 0 0 10px;
+  margin-right: 22px;
+  position: relative;
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+.seg-tab:last-child { margin-right: 0; }
+.seg-tab:hover { color: var(--fg-dim); }
+.seg-tab.active {
+  color: var(--tab-active-color);
+}
+.seg-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 2px;
+  background: var(--tab-indicator);
+  border-radius: 2px 2px 0 0;
+}
+
+/* ═══════════════════════════════════════════
+   SCROLLABLE CONTENT
+═══════════════════════════════════════════ */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  padding-bottom: 8px;
+}
+.content::-webkit-scrollbar { display: none; }
+
+/* ─── RECENT SECTION ─── */
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 16px 22px 10px;
+}
+
+.recent-scroll {
+  display: flex;
+  gap: 12px;
+  padding: 0 22px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.recent-scroll::-webkit-scrollbar { display: none; }
+
+.recent-card {
+  flex-shrink: 0;
+  width: 108px;
+  cursor: pointer;
+}
+.recent-art {
+  width: 108px;
+  height: 108px;
+  border-radius: 3px;
+  object-fit: cover;
+  display: block;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+}
+.recent-title {
+  margin-top: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.recent-sub {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--muted2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+/* ─── DIVIDER ─── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 14px 22px 0;
+}
+
+/* ─── ALPHA SECTION HEADER ─── */
+.alpha-head {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--section-letter);
+  padding: 12px 22px 4px;
+}
+
+/* ─── SONG ROW ─── */
+.song-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 22px;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.12s;
+  position: relative;
+}
+.song-row:hover { background: var(--row-hover); }
+.song-row:active { background: var(--accent-dim); }
+
+.song-thumb {
+  width: 46px;
+  height: 46px;
+  border-radius: 3px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+}
+.song-thumb-placeholder {
+  width: 46px;
+  height: 46px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.song-text { flex: 1; min-width: 0; }
+.song-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.song-title.playing-title { color: var(--play-indicator); }
+.song-artist {
+  font-family: 'Space Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--muted2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.song-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.song-dur {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* Playing indicator — 3 animated bars */
+.eq-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+  width: 14px;
+}
+.eq-bar {
+  width: 3px;
+  border-radius: 1px;
+  background: var(--play-indicator);
+  animation: eq 0.8s ease-in-out infinite alternate;
+}
+.eq-bar:nth-child(1) { height: 60%; animation-delay: 0s; }
+.eq-bar:nth-child(2) { height: 100%; animation-delay: 0.2s; }
+.eq-bar:nth-child(3) { height: 40%; animation-delay: 0.4s; }
+@keyframes eq {
+  from { transform: scaleY(0.3); }
+  to   { transform: scaleY(1); }
+}
+
+/* Row separator */
+.song-row + .song-row::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 80px; right: 22px;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ═══════════════════════════════════════════
+   BOTTOM NAV
+═══════════════════════════════════════════ */
+.bottom-nav {
+  display: flex;
+  height: 68px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+}
+.nav-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted2);
+  padding-bottom: 8px;
+  position: relative;
+  transition: color 0.14s;
+}
+.nav-tab:hover { color: var(--fg-dim); }
+.nav-tab.active { color: var(--fg); }
+.nav-tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 28px; height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: var(--tab-indicator);
+}
+.nav-tab span {
+  font-family: 'Space Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════
+   LOAD ANIMATIONS
+═══════════════════════════════════════════ */
+.header     { animation: up 0.45s 0.04s both; }
+.search-wrap{ animation: up 0.45s 0.09s both; }
+.seg-tabs   { animation: up 0.45s 0.13s both; }
+.content    { animation: up 0.45s 0.18s both; }
+
+@keyframes up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     MACRO TEMPLATE — rendered 3× via JS
+══════════════════════════════════════ -->
+
+<script>
+const songs = [
+  { title: "Tose Naina", artist: "Arijit Singh", label: "T-Series", dur: "4:23",
+    img: "https://i.ytimg.com/vi/wMhpMsEQhJU/maxresdefault.jpg", playing: true, alpha: "#" },
+  { title: "Bulleya", artist: "Papon", label: "YRF", dur: "4:33",
+    img: "https://i.ytimg.com/vi/9aMpRHkZBrc/maxresdefault.jpg", playing: false, alpha: "B" },
+  { title: "AIZO", artist: "King Gnu", label: "King Gnu Official", dur: "3:57",
+    img: "https://i.ytimg.com/vi/7Mq6N0C7JqA/maxresdefault.jpg", playing: false, alpha: "K" },
+  { title: "RISE", artist: "The Glitch Mob, Mako", label: "League of Legends", dur: "3:30",
+    img: "https://i.ytimg.com/vi/fB8TyLTD7EE/maxresdefault.jpg", playing: false, alpha: "R" },
+  { title: "Titli", artist: "Shreya Ghoshal", label: "T-Series", dur: "5:47",
+    img: "https://i.ytimg.com/vi/uiMrJc0PnD4/maxresdefault.jpg", playing: false, alpha: "T" },
+  { title: "Zinda", artist: "Siddharth Mahadevan", label: "T-Series", dur: "3:12",
+    img: "https://i.ytimg.com/vi/RobKoH2KHGQ/maxresdefault.jpg", playing: false, alpha: "Z" },
+];
+
+const themes = [
+  { cls: "nothing",  label: "Nothing — Red Accent" },
+  { cls: "obsidian", label: "Obsidian — Dark Mono" },
+  { cls: "chalk",    label: "Chalk — Light Mono" },
+];
+
+// Group songs by alpha
+function groupedSongs(songs) {
+  const map = {};
+  songs.forEach(s => {
+    if (!map[s.alpha]) map[s.alpha] = [];
+    map[s.alpha].push(s);
+  });
+  return map;
+}
+
+function statusIcons() {
+  return `
+    <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor">
+      <rect x="0" y="6" width="3" height="5" rx="0.5"/>
+      <rect x="4" y="4" width="3" height="7" rx="0.5"/>
+      <rect x="8" y="2" width="3" height="9" rx="0.5"/>
+      <rect x="12" y="0" width="3" height="11" rx="0.5" opacity="0.25"/>
+    </svg>
+    <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor">
+      <path d="M7.5 8.5a1.3 1.3 0 110 2.6 1.3 1.3 0 010-2.6zm0-3.2c1.6 0 3 .7 4 1.8L10.2 8.4A3.6 3.6 0 007.5 7.3c-1 0-2 .4-2.7 1.1L3.5 7.1a5.4 5.4 0 014-1.8zm0-3.1c2.5 0 4.7 1 6.3 2.7l-1.3 1.3A6.2 6.2 0 007.5 4 6.2 6.2 0 002 6.2L.7 4.9A8.5 8.5 0 017.5 2.2z"/>
+    </svg>
+    <svg width="24" height="11" viewBox="0 0 24 11" fill="none">
+      <rect x="0.5" y="0.5" width="20" height="10" rx="2.5" stroke="currentColor" stroke-opacity="0.4"/>
+      <rect x="2" y="2" width="15" height="7" rx="1.5" fill="currentColor"/>
+      <path d="M22 3.5v4a1.8 1.8 0 000-4z" fill="currentColor" opacity="0.35"/>
+    </svg>`;
+}
+
+function navIcons() {
+  return [
+    { label: 'Library', active: true, icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>` },
+    { label: 'Player',  active: false, icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>` },
+    { label: 'Queue',   active: false, icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>` },
+  ];
+}
+
+function renderPhone(theme) {
+  const grouped = groupedSongs(songs);
+  const recentSongs = songs.slice(0, 3);
+
+  const recentCards = recentSongs.map(s => `
+    <div class="recent-card">
+      <img class="recent-art" src="${s.img}" alt="${s.title}"
+        onerror="this.style.display='none'">
+      <div class="recent-title">${s.title}</div>
+      <div class="recent-sub">${s.artist}</div>
+    </div>
+  `).join('');
+
+  const songRows = Object.entries(grouped).map(([alpha, group]) => {
+    const rows = group.map(s => `
+      <div class="song-row">
+        <img class="song-thumb" src="${s.img}" alt="${s.title}"
+          onerror="this.style.display='none'">
+        <div class="song-text">
+          <div class="song-title ${s.playing ? 'playing-title' : ''}">${s.title}</div>
+          <div class="song-artist">${s.artist}</div>
+        </div>
+        <div class="song-right">
+          ${s.playing ? `<div class="eq-bars"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div>` : ''}
+          <span class="song-dur">${s.dur}</span>
+        </div>
+      </div>
+    `).join('');
+    return `<div class="alpha-head">${alpha}</div>${rows}`;
+  }).join('');
+
+  const navTabs = navIcons().map(n => `
+    <button class="nav-tab ${n.active ? 'active' : ''}">
+      ${n.icon}
+      <span>${n.label}</span>
+    </button>
+  `).join('');
+
+  return `
+  <div class="phone-wrap">
+    <div class="phone ${theme.cls}">
+
+      <div class="status">
+        <span class="status-time">9:41</span>
+        <div class="status-icons">${statusIcons()}</div>
+      </div>
+
+      <div class="header">
+        <span class="header-title">LIBRARY</span>
+        <div class="header-actions">
+          <!-- Sort icon -->
+          <button class="icon-btn" title="Sort">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="6" x2="11" y2="6"/><line x1="4" y1="12" x2="13" y2="12"/>
+              <line x1="4" y1="18" x2="20" y2="18"/>
+              <polyline points="15 9 18 6 21 9"/><line x1="18" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+          <!-- Settings icon -->
+          <button class="icon-btn" title="Settings">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+            </svg>
+          </button>
+          <button class="scan-btn">Scan</button>
+        </div>
+      </div>
+
+      <div class="search-wrap">
+        <div class="search-box">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" placeholder="Search songs, albums, artists" readonly>
+        </div>
+      </div>
+
+      <div class="seg-tabs">
+        <button class="seg-tab active">Songs</button>
+        <button class="seg-tab">Albums</button>
+        <button class="seg-tab">Artists</button>
+        <button class="seg-tab">Playlists</button>
+      </div>
+
+      <div class="content">
+        <div class="section-label">Recent</div>
+        <div class="recent-scroll">${recentCards}</div>
+        <div class="divider"></div>
+        ${songRows}
+      </div>
+
+      <div class="bottom-nav">${navTabs}</div>
+    </div>
+    <p class="theme-label">${theme.label}</p>
+  </div>
+  `;
+}
+
+document.body.innerHTML = themes.map(renderPhone).join('');
+
+// Seg tab interaction (all phones)
+document.querySelectorAll('.seg-tabs').forEach(tabs => {
+  tabs.querySelectorAll('.seg-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabs.querySelectorAll('.seg-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+});
+
+</script>
+</body>
+</html>
