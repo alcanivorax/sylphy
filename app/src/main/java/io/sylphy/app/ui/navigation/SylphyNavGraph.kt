@@ -178,7 +178,7 @@ fun SylphyNavGraph(
                 when (page) {
                     PAGE_LIBRARY -> LibraryScreen(navController)
                     PAGE_PLAYER -> PlayerScreen(navController, themeMode = themeMode)
-                    PAGE_QUEUE -> QueueScreen()
+                    PAGE_QUEUE -> QueueScreen(themeMode = themeMode)
                     else -> PlayerScreen(navController, themeMode = themeMode)
                 }
             }
@@ -207,7 +207,7 @@ fun SylphyNavGraph(
                 },
             ) {
                 composable(Screen.Player.route) { PlayerScreen(navController, themeMode = themeMode) }
-                composable(Screen.Queue.route) { QueueScreen() }
+                composable(Screen.Queue.route) { QueueScreen(themeMode = themeMode) }
                 composable(Screen.Library.route) { LibraryScreen(navController) }
 
                 composable(

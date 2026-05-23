@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -37,6 +39,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -48,7 +51,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -56,235 +62,257 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import io.sylphy.app.R
-import io.sylphy.app.core.util.toHhMm
 import io.sylphy.app.core.util.toMmSs
+import io.sylphy.app.data.model.ThemeMode
 import io.sylphy.app.data.model.Track
-import io.sylphy.app.ui.components.shared.EmptyState
-import io.sylphy.app.ui.components.shared.SylphyDivider
-import io.sylphy.app.ui.theme.ActiveBackground
-import io.sylphy.app.ui.theme.ActiveForeground
-import io.sylphy.app.ui.theme.BgBase
-import io.sylphy.app.ui.theme.BgElevated
-import io.sylphy.app.ui.theme.BorderDefault
-import io.sylphy.app.ui.theme.FgMuted
-import io.sylphy.app.ui.theme.FgPrimary
-import io.sylphy.app.ui.theme.FgSubtle
-import io.sylphy.app.ui.theme.Layout
-import io.sylphy.app.ui.theme.PlayerTheme
-import io.sylphy.app.ui.theme.ProgressFilled
-import io.sylphy.app.ui.theme.ProgressEmpty
-import io.sylphy.app.ui.theme.Spacing
-import io.sylphy.app.ui.theme.SylphyType
+import io.sylphy.app.ui.theme.DmSans
+import io.sylphy.app.ui.theme.QueueChromeColors
+import io.sylphy.app.ui.theme.SpaceMono
+import io.sylphy.app.ui.theme.queueChromeColors
 import kotlin.math.roundToInt
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
+private val PanelShape = RoundedCornerShape(3.dp)
+private val RowHeight = 60.dp
 
 @Composable
 fun QueueScreen(
     viewModel: QueueViewModel = hiltViewModel(),
+    themeMode: ThemeMode = ThemeMode.MONOCHROME_DARK,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val colors = queueChromeColors(themeMode)
+    val systemUiController = rememberSystemUiController()
+    val darkIcons = colors.bg.luminance() > 0.5f
+
+    SideEffect {
+        systemUiController.setSystemBarsColor(Color.Transparent, darkIcons = darkIcons)
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgBase),
+            .background(colors.bg),
     ) {
         if (uiState.tracks.isEmpty()) {
-            EmptyState(
-                title = "Queue empty",
-                description = "Play a track from Library to start a queue.",
-                modifier = Modifier.align(Alignment.Center),
-            )
+            EmptyQueueState(colors = colors, modifier = Modifier.align(Alignment.Center))
             return@Box
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
-
-            // ── Header ──────────────────────────────────────────────────────
-            QueueHeader(
-                trackCount = uiState.tracks.size,
-                upNextDurationMs = uiState.upNextDurationMs,
-                onAdd = { /* TODO: open track picker */ },
-            )
-
-            // ── Now Playing card ─────────────────────────────────────────────
-            uiState.nowPlaying?.let { track ->
-                NowPlayingCard(
-                    track = track,
-                    modifier = Modifier.padding(
-                        horizontal = Spacing.md,
-                        vertical = Spacing.sm,
-                    ),
+            FadeUp(delayMillis = 40) {
+                QueueHeader(
+                    colors = colors,
+                    trackCount = uiState.tracks.size,
+                    totalDurationMs = uiState.tracks.sumOf { it.durationMs },
+                    shuffleEnabled = uiState.shuffleEnabled,
+                    onShuffle = viewModel::toggleShuffle,
+                    onAdd = {},
                 )
             }
 
-            // ── Up Next section label ────────────────────────────────────────
-            if (uiState.upNext.isNotEmpty()) {
-                UpNextSectionHeader(
+            uiState.nowPlaying?.let { track ->
+                FadeUp(delayMillis = 90) {
+                    NowPlayingCard(
+                        track = track,
+                        colors = colors,
+                        themeMode = themeMode,
+                        positionMs = uiState.positionMs,
+                        durationMs = uiState.durationMs.takeIf { it > 0L } ?: track.durationMs,
+                    )
+                }
+            }
+
+            FadeUp(delayMillis = 130) {
+                UpNextHeader(
+                    colors = colors,
                     remainingCount = uiState.remainingCount,
                     onClear = viewModel::clearUpNext,
                 )
             }
 
-            // ── Draggable queue list ─────────────────────────────────────────
-            QueueList(
-                upNext = uiState.upNext,
-                // Absolute index offset: upNext starts at activeIndex + 1
-                indexOffset = (uiState.activeIndex + 1).coerceAtLeast(0),
-                onPlay = { absoluteIndex -> viewModel.playAt(absoluteIndex) },
-                onRemove = { absoluteIndex -> viewModel.removeAt(absoluteIndex) },
-                onMove = { from, to -> viewModel.move(from, to) },
+            FadeUp(
+                delayMillis = 170,
                 modifier = Modifier.weight(1f),
-            )
-
-            // ── Footer: total up-next duration ───────────────────────────────
-            if (uiState.upNext.isNotEmpty()) {
-                QueueFooter(totalDurationMs = uiState.upNextDurationMs)
+            ) {
+                QueueList(
+                    colors = colors,
+                    upNext = uiState.upNext,
+                    indexOffset = (uiState.activeIndex + 1).coerceAtLeast(0),
+                    onPlay = viewModel::playAt,
+                    onRemove = viewModel::removeAt,
+                    onMove = viewModel::move,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
+
+            QueueFooter(colors = colors, totalDurationMs = uiState.upNextDurationMs)
         }
     }
 }
 
-// ─── Header ───────────────────────────────────────────────────────────────────
-
 @Composable
 private fun QueueHeader(
+    colors: QueueChromeColors,
     trackCount: Int,
-    upNextDurationMs: Long,
+    totalDurationMs: Long,
+    shuffleEnabled: Boolean,
+    onShuffle: () -> Unit,
     onAdd: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(Layout.topBarHeight)
-            .padding(horizontal = Spacing.md),
+            .statusBarsPadding()
+            .padding(start = 22.dp, end = 22.dp, top = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = "QUEUE",
-                style = SylphyType.DisplayLarge,
-                color = FgPrimary,
+                fontFamily = SpaceMono,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.fg,
+                letterSpacing = 0.88.sp,
+                lineHeight = 22.sp,
             )
             Text(
-                // e.g. "5 tracks · 21 min"
-                text = "$trackCount tracks · ${upNextDurationMs.toHhMm()}",
-                style = SylphyType.CodeSmall,
-                color = FgMuted,
+                text = "$trackCount tracks · ${totalDurationMs.toQueueDuration()}",
+                fontFamily = SpaceMono,
+                fontSize = 9.sp,
+                color = colors.muted2,
+                letterSpacing = 1.26.sp,
+                lineHeight = 14.sp,
+                modifier = Modifier.padding(top = 4.dp),
             )
         }
 
-        IconButton(onClick = onAdd, modifier = Modifier.size(Layout.transportTapTarget)) {
-            Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = "Add to queue",
-                tint = FgMuted,
-                modifier = Modifier.size(Layout.transportIconSize),
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            IconButton(onClick = onShuffle, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_shuffle),
+                    contentDescription = "Shuffle",
+                    tint = if (shuffleEnabled) colors.accent else colors.muted2,
+                    modifier = Modifier.size(17.dp),
+                )
+            }
+            IconButton(onClick = onAdd, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Add to queue",
+                    tint = colors.muted2,
+                    modifier = Modifier.size(17.dp),
+                )
+            }
         }
     }
 }
-
-// ─── Now Playing Card ─────────────────────────────────────────────────────────
 
 @Composable
 private fun NowPlayingCard(
     track: Track,
-    modifier: Modifier = Modifier,
+    colors: QueueChromeColors,
+    themeMode: ThemeMode,
+    positionMs: Long,
+    durationMs: Long,
 ) {
-    val accentColor = PlayerTheme.Red
-    val borderColor = accentColor.copy(alpha = 0.25f)
-
-    Box(
-        modifier = modifier
+    Row(
+        modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(4.dp))
-            .background(accentColor.copy(alpha = 0.07f))
-            .border(Layout.borderThin, borderColor, RoundedCornerShape(4.dp))
-            // Left accent bar drawn via drawBehind to avoid extra Box nesting
+            .padding(start = 22.dp, end = 22.dp, top = 16.dp)
+            .clip(PanelShape)
+            .background(colors.playingBg)
+            .border(1.dp, colors.playingBorder, PanelShape)
             .drawBehind {
-                drawRect(
-                    color = accentColor,
-                    size = androidx.compose.ui.geometry.Size(
-                        width = Layout.borderThick.toPx(),
-                        height = size.height,
-                    ),
-                )
+                drawRect(color = colors.accent, size = Size(2.dp.toPx(), size.height))
             }
-            .padding(start = Spacing.sm + Layout.borderThick, end = Spacing.sm, top = Spacing.sm, bottom = Spacing.sm),
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            // Artwork with EQ bars overlay
-            Box(modifier = Modifier.size(Layout.albumArtSizeSm)) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(track.artworkPath)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    error = painterResource(R.drawable.ic_sylphy_background),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(3.dp))
-                        .border(Layout.borderThin, BorderDefault, RoundedCornerShape(3.dp)),
-                )
-                // EQ bars in the bottom-left corner of the artwork
-                NowPlayingEqBars(
-                    color = accentColor,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(Color.Black.copy(alpha = 0.55f))
-                        .padding(horizontal = 4.dp, vertical = 3.dp),
-                )
-            }
+        Box(modifier = Modifier.size(52.dp)) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(track.artworkPath)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                error = painterResource(R.drawable.ic_sylphy_background),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(PanelShape)
+                    .background(colors.surface2)
+                    .border(1.dp, colors.border2, PanelShape),
+            )
+            NowPlayingEqBars(
+                color = colors.accent,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 4.dp, bottom = 4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        if (themeMode == ThemeMode.MONOCHROME_LIGHT) {
+                            colors.bg.copy(alpha = 0.7f)
+                        } else {
+                            Color.Black.copy(alpha = 0.55f)
+                        }
+                    )
+                    .padding(start = 4.dp, end = 4.dp, top = 3.dp, bottom = 2.dp),
+            )
+        }
 
-            // Track info + mini scrubber
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "NOW PLAYING",
-                    style = SylphyType.Heading,
-                    color = accentColor,
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = track.title,
-                    style = SylphyType.Body,
-                    color = FgPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = track.artist,
-                    style = SylphyType.CodeSmall,
-                    color = FgMuted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(Spacing.xs))
-                // Static mini scrubber — progress driven by PlayerViewModel via shared state.
-                // QueueViewModel does not own elapsed time; show only the total duration.
-                MiniDurationBar(durationMs = track.durationMs)
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Now Playing",
+                fontFamily = SpaceMono,
+                fontSize = 8.sp,
+                color = colors.accent,
+                letterSpacing = 1.44.sp,
+                lineHeight = 10.sp,
+            )
+            Text(
+                text = track.title,
+                fontFamily = DmSans,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.fg,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 18.sp,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Text(
+                text = track.artist,
+                fontFamily = SpaceMono,
+                fontSize = 9.5.sp,
+                color = colors.muted2,
+                letterSpacing = 0.57.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 13.sp,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+            MiniScrubber(
+                colors = colors,
+                positionMs = positionMs,
+                durationMs = durationMs,
+                modifier = Modifier.padding(top = 10.dp),
+            )
         }
     }
 }
-
-// ─── Animated EQ bars ─────────────────────────────────────────────────────────
 
 @Composable
 private fun NowPlayingEqBars(
@@ -296,19 +324,15 @@ private fun NowPlayingEqBars(
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        // Three bars with staggered infinite animations
-        listOf(
-            Triple(8.dp, 0, 0),
-            Triple(12.dp, 180, 0),
-            Triple(6.dp, 90, 0),
-        ).forEachIndexed { i, (maxH, _, _) ->
-            val anim = remember { Animatable(0.3f) }
-            LaunchedEffect(i) {
-                anim.animateTo(
+        listOf(8.dp, 12.dp, 6.dp).forEachIndexed { index, maxHeight ->
+            val scale = remember { Animatable(0.25f) }
+            LaunchedEffect(index) {
+                scale.animateTo(
                     targetValue = 1f,
                     animationSpec = infiniteRepeatable(
                         animation = tween(
-                            durationMillis = 600 + i * 150,
+                            durationMillis = 700,
+                            delayMillis = index * 180,
                             easing = LinearEasing,
                         ),
                         repeatMode = RepeatMode.Reverse,
@@ -318,7 +342,7 @@ private fun NowPlayingEqBars(
             Box(
                 modifier = Modifier
                     .width(3.dp)
-                    .height(maxH * anim.value)
+                    .height(maxHeight * scale.value)
                     .clip(RoundedCornerShape(1.dp))
                     .background(color),
             )
@@ -326,83 +350,109 @@ private fun NowPlayingEqBars(
     }
 }
 
-// ─── Mini duration bar (static — no seek on queue screen) ─────────────────────
-
 @Composable
-private fun MiniDurationBar(durationMs: Long) {
-    Column {
+private fun MiniScrubber(
+    colors: QueueChromeColors,
+    positionMs: Long,
+    durationMs: Long,
+    modifier: Modifier = Modifier,
+) {
+    val progress = if (durationMs > 0L) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+
+    Column(modifier = modifier) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(2.dp)
-                .clip(RoundedCornerShape(1.dp))
-                .background(ProgressEmpty),
-        )
-        Spacer(Modifier.height(4.dp))
+                .clip(RoundedCornerShape(2.dp))
+                .background(colors.border2),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(progress)
+                    .background(colors.progressFill),
+            )
+        }
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 5.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "0:00",
-                style = SylphyType.CodeSmall,
-                color = FgSubtle,
+                text = positionMs.coerceAtLeast(0L).toMmSs(),
+                fontFamily = SpaceMono,
+                fontSize = 9.sp,
+                color = colors.muted,
+                letterSpacing = 0.36.sp,
             )
             Text(
-                text = durationMs.toMmSs(),
-                style = SylphyType.CodeSmall,
-                color = FgSubtle,
+                text = durationMs.coerceAtLeast(0L).toMmSs(),
+                fontFamily = SpaceMono,
+                fontSize = 9.sp,
+                color = colors.muted,
+                letterSpacing = 0.36.sp,
             )
         }
     }
 }
 
-// ─── Up Next section header ────────────────────────────────────────────────────
-
 @Composable
-private fun UpNextSectionHeader(
+private fun UpNextHeader(
+    colors: QueueChromeColors,
     remainingCount: Int,
     onClear: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+            .padding(start = 22.dp, end = 22.dp, top = 18.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
-            text = "UP NEXT",
-            style = SylphyType.Heading,
-            color = FgMuted,
+            text = "Up Next",
+            fontFamily = SpaceMono,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            color = colors.muted,
+            letterSpacing = 1.8.sp,
+            lineHeight = 12.sp,
         )
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Text(
                 text = "$remainingCount remaining",
-                style = SylphyType.CodeSmall,
-                color = FgSubtle,
+                fontFamily = SpaceMono,
+                fontSize = 9.sp,
+                color = colors.muted,
+                letterSpacing = 0.9.sp,
             )
-            Spacer(Modifier.width(Spacing.md))
             Text(
-                text = "CLEAR",
-                style = SylphyType.Heading,
-                color = FgMuted,
+                text = "Clear",
+                fontFamily = SpaceMono,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.muted2,
+                letterSpacing = 0.9.sp,
                 modifier = Modifier
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = onClear,
                     )
-                    .padding(vertical = Spacing.xs),
+                    .padding(vertical = 3.dp),
             )
         }
     }
 }
 
-// ─── Draggable list ───────────────────────────────────────────────────────────
-
 @Composable
 private fun QueueList(
+    colors: QueueChromeColors,
     upNext: List<Track>,
     indexOffset: Int,
     onPlay: (Int) -> Unit,
@@ -412,9 +462,16 @@ private fun QueueList(
 ) {
     var draggingIndex by remember { mutableIntStateOf(-1) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
-    val itemHeightPx = with(LocalDensity.current) { Layout.queueItemHeight.toPx() }
+    val itemHeightPx = with(LocalDensity.current) { RowHeight.toPx() }
 
-    LazyColumn(modifier = modifier.fillMaxWidth()) {
+    if (upNext.isEmpty()) {
+        EmptyQueueState(colors = colors, modifier = modifier)
+        return
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+    ) {
         itemsIndexed(
             items = upNext,
             key = { _, track -> track.id },
@@ -423,15 +480,19 @@ private fun QueueList(
             val isDragging = draggingIndex == localIndex
 
             QueueRowItem(
+                colors = colors,
                 track = track,
-                position = absoluteIndex + 1,          // 1-based display number
+                position = absoluteIndex + 1,
+                showTopDivider = localIndex > 0,
                 isDragging = isDragging,
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(
-                        if (isDragging) Modifier.offset(
-                            y = with(LocalDensity.current) { dragOffset.toDp() }
-                        ) else Modifier,
+                        if (isDragging) {
+                            Modifier.offset(y = with(LocalDensity.current) { dragOffset.toDp() })
+                        } else {
+                            Modifier
+                        },
                     )
                     .pointerInput(localIndex, upNext.size) {
                         detectDragGesturesAfterLongPress(
@@ -440,8 +501,8 @@ private fun QueueList(
                                 dragOffset = 0f
                             },
                             onDragEnd = {
-                                val targetLocal = (localIndex + (dragOffset / itemHeightPx)
-                                    .roundToInt()).coerceIn(0, upNext.lastIndex)
+                                val targetLocal = (localIndex + (dragOffset / itemHeightPx).roundToInt())
+                                    .coerceIn(0, upNext.lastIndex)
                                 onMove(absoluteIndex, targetLocal + indexOffset)
                                 draggingIndex = -1
                                 dragOffset = 0f
@@ -458,20 +519,16 @@ private fun QueueList(
                 onPlay = { onPlay(absoluteIndex) },
                 onRemove = { onRemove(absoluteIndex) },
             )
-
-            SylphyDivider(
-                modifier = Modifier.padding(start = Spacing.md + Layout.albumArtSizeSm + Spacing.sm),
-            )
         }
     }
 }
 
-// ─── Queue Row Item ───────────────────────────────────────────────────────────
-
 @Composable
 private fun QueueRowItem(
+    colors: QueueChromeColors,
     track: Track,
     position: Int,
+    showTopDivider: Boolean,
     isDragging: Boolean,
     modifier: Modifier = Modifier,
     onPlay: () -> Unit,
@@ -480,15 +537,14 @@ private fun QueueRowItem(
     val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-
-    val rowScale by animateFloatAsState(
+    val scale by animateFloatAsState(
         targetValue = when {
-            isDragging -> 1.02f
-            pressed    -> 0.97f
-            else       -> 1f
+            isDragging -> 1.01f
+            pressed -> 0.985f
+            else -> 1f
         },
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
+            dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMedium,
         ),
         label = "queue_row_scale",
@@ -496,9 +552,19 @@ private fun QueueRowItem(
 
     Row(
         modifier = modifier
-            .height(Layout.queueItemHeight)
-            .scale(rowScale)
-            .background(if (isDragging) BgElevated else BgBase)
+            .height(RowHeight)
+            .scale(scale)
+            .background(if (isDragging) colors.accentDim else colors.bg)
+            .drawBehind {
+                if (showTopDivider) {
+                    drawLine(
+                        color = colors.border,
+                        start = Offset(68.dp.toPx(), 0f),
+                        end = Offset(size.width - 22.dp.toPx(), 0f),
+                        strokeWidth = 1.dp.toPx(),
+                    )
+                }
+            }
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -507,22 +573,22 @@ private fun QueueRowItem(
                     onPlay()
                 },
             )
-            .padding(horizontal = Spacing.md),
+            .padding(horizontal = 22.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // Drag handle — 3 horizontal bars
-        DragHandleIcon(modifier = Modifier.width(Spacing.md))
+        DragHandle(colors = colors, modifier = Modifier.width(18.dp))
 
-        // Position number
         Text(
             text = position.toString().padStart(2, '0'),
-            style = SylphyType.CodeSmall,
-            color = FgSubtle,
-            modifier = Modifier.width(24.dp),
+            fontFamily = SpaceMono,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            color = colors.muted,
+            letterSpacing = 0.4.sp,
+            modifier = Modifier.width(18.dp),
         )
 
-        // Artwork thumbnail
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(track.artworkPath)
@@ -532,55 +598,60 @@ private fun QueueRowItem(
             contentScale = ContentScale.Crop,
             error = painterResource(R.drawable.ic_sylphy_background),
             modifier = Modifier
-                .size(Layout.albumArtSizeSm)
-                .clip(RoundedCornerShape(3.dp))
-                .border(Layout.borderThin, BorderDefault, RoundedCornerShape(3.dp)),
+                .size(44.dp)
+                .clip(PanelShape)
+                .background(colors.surface2)
+                .border(1.dp, colors.border2, PanelShape),
         )
 
-        // Title + artist
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = track.title,
-                style = SylphyType.Code,
-                color = FgPrimary,
+                fontFamily = DmSans,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.fg,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                lineHeight = 17.5.sp,
             )
             Text(
                 text = track.artist,
-                style = SylphyType.BodySmall,
-                color = FgMuted,
+                fontFamily = SpaceMono,
+                fontSize = 9.sp,
+                color = colors.muted2,
+                letterSpacing = 0.54.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                lineHeight = 12.sp,
+                modifier = Modifier.padding(top = 2.dp),
             )
         }
 
-        // Duration
         Text(
             text = track.durationMs.toMmSs(),
-            style = SylphyType.CodeSmall,
-            color = FgSubtle,
+            fontFamily = SpaceMono,
+            fontSize = 10.sp,
+            color = colors.muted,
+            letterSpacing = 0.4.sp,
         )
 
-        // Remove button
-        IconButton(
-            onClick = onRemove,
-            modifier = Modifier.size(Layout.transportTapTarget),
-        ) {
+        IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
             Icon(
-                painter = painterResource(R.drawable.ic_remove), // 'x' icon
+                painter = painterResource(R.drawable.ic_remove),
                 contentDescription = "Remove from queue",
-                tint = FgSubtle,
-                modifier = Modifier.size(16.dp),
+                tint = colors.removeColor,
+                modifier = Modifier.size(13.dp),
             )
         }
     }
 }
 
-// ─── Drag handle ──────────────────────────────────────────────────────────────
-
 @Composable
-private fun DragHandleIcon(modifier: Modifier = Modifier) {
+private fun DragHandle(
+    colors: QueueChromeColors,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -592,40 +663,122 @@ private fun DragHandleIcon(modifier: Modifier = Modifier) {
                     .width(14.dp)
                     .height(1.5.dp)
                     .clip(RoundedCornerShape(1.dp))
-                    .background(FgSubtle),
+                    .background(colors.dragHandle),
             )
         }
     }
 }
 
-// ─── Footer ───────────────────────────────────────────────────────────────────
-
 @Composable
-private fun QueueFooter(totalDurationMs: Long) {
+private fun QueueFooter(
+    colors: QueueChromeColors,
+    totalDurationMs: Long,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .drawBehind {
                 drawLine(
-                    color = Color(0xFF222222),
-                    start = Offset(0f, 0f),
+                    color = colors.border,
+                    start = Offset.Zero,
                     end = Offset(size.width, 0f),
                     strokeWidth = 1.dp.toPx(),
                 )
             }
-            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            .padding(start = 22.dp, end = 22.dp, top = 10.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "TOTAL  ",
-            style = SylphyType.Heading,
-            color = FgSubtle,
+            text = "Total",
+            fontFamily = SpaceMono,
+            fontSize = 9.sp,
+            color = colors.muted,
+            letterSpacing = 1.08.sp,
         )
+        Spacer(Modifier.width(6.dp))
         Text(
-            text = totalDurationMs.toHhMm(),
-            style = SylphyType.CodeSmall,
-            color = FgMuted,
+            text = totalDurationMs.toQueueDuration(),
+            fontFamily = SpaceMono,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            color = colors.muted2,
+            letterSpacing = 0.9.sp,
         )
+    }
+}
+
+@Composable
+private fun EmptyQueueState(
+    colors: QueueChromeColors,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(horizontal = 22.dp, vertical = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Canvas(modifier = Modifier.size(42.dp)) {
+            val stroke = 1.6.dp.toPx()
+            repeat(3) { index ->
+                val y = 10.dp.toPx() + index * 10.dp.toPx()
+                drawLine(
+                    color = colors.muted.copy(alpha = 0.42f),
+                    start = Offset(12.dp.toPx(), y),
+                    end = Offset(size.width - 8.dp.toPx(), y),
+                    strokeWidth = stroke,
+                )
+                drawCircle(
+                    color = colors.muted.copy(alpha = 0.42f),
+                    radius = 1.6.dp.toPx(),
+                    center = Offset(6.dp.toPx(), y),
+                )
+            }
+        }
+        Text(
+            text = "Queue empty",
+            fontFamily = SpaceMono,
+            fontSize = 10.sp,
+            color = colors.muted,
+            letterSpacing = 1.4.sp,
+        )
+    }
+}
+
+@Composable
+private fun FadeUp(
+    delayMillis: Int,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val alpha = remember { Animatable(0f) }
+    val y = remember { Animatable(10f) }
+
+    LaunchedEffect(Unit) {
+        alpha.animateTo(1f, tween(durationMillis = 420, delayMillis = delayMillis))
+    }
+    LaunchedEffect(Unit) {
+        y.animateTo(0f, tween(durationMillis = 420, delayMillis = delayMillis))
+    }
+
+    Box(
+        modifier = modifier.graphicsLayer {
+            this.alpha = alpha.value
+            translationY = y.value
+        },
+    ) {
+        content()
+    }
+}
+
+private fun Long.toQueueDuration(): String {
+    val totalSeconds = (this / 1000).coerceAtLeast(0)
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        "${hours}h ${minutes}m"
+    } else {
+        "${minutes}m ${seconds}s"
     }
 }

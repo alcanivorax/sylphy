@@ -205,3 +205,77 @@ fun playerChromeColors(mode: ThemeMode): PlayerChromeColors {
         )
     }
 }
+
+data class QueueChromeColors(
+    val bg: Color,
+    val surface2: Color,
+    val border: Color,
+    val border2: Color,
+    val muted: Color,
+    val muted2: Color,
+    val fg: Color,
+    val fgDim: Color,
+    val accent: Color,
+    val accentDim: Color,
+    val playingBg: Color,
+    val playingBorder: Color,
+    val dragHandle: Color,
+    val removeColor: Color,
+    val progressFill: Color,
+)
+
+fun queueChromeColors(mode: ThemeMode): QueueChromeColors {
+    return when (mode) {
+        ThemeMode.NOTHING_OS -> QueueChromeColors(
+            bg = Color(0xFF000000),
+            surface2 = Color(0xFF161616),
+            border = Color(0xFF222222),
+            border2 = Color(0xFF2C2C2C),
+            muted = Color(0xFF444444),
+            muted2 = Color(0xFF666666),
+            fg = Color(0xFFF0F0F0),
+            fgDim = Color(0x73F0F0F0),
+            accent = Color(0xFFFF3B3B),
+            accentDim = Color(0x1FFF3B3B),
+            playingBg = Color(0x12FF3B3B),
+            playingBorder = Color(0x38FF3B3B),
+            dragHandle = Color(0xFF333333),
+            removeColor = Color(0xFF444444),
+            progressFill = Color(0xFFFF3B3B),
+        )
+        ThemeMode.MONOCHROME_DARK -> QueueChromeColors(
+            bg = Color(0xFF0A0A0A),
+            surface2 = Color(0xFF181818),
+            border = Color(0xFF1E1E1E),
+            border2 = Color(0xFF272727),
+            muted = Color(0xFF3A3A3A),
+            muted2 = Color(0xFF5A5A5A),
+            fg = Color(0xFFE8E8E8),
+            fgDim = Color(0x66E8E8E8),
+            accent = Color(0xFFE8E8E8),
+            accentDim = Color(0x0FE8E8E8),
+            playingBg = Color(0x0DE8E8E8),
+            playingBorder = Color(0x24E8E8E8),
+            dragHandle = Color(0xFF2E2E2E),
+            removeColor = Color(0xFF3A3A3A),
+            progressFill = Color(0xFFE8E8E8),
+        )
+        ThemeMode.MONOCHROME_LIGHT -> QueueChromeColors(
+            bg = Color(0xFFF2F0EB),
+            surface2 = Color(0xFFE0DDD6),
+            border = Color(0xFFCCC8BF),
+            border2 = Color(0xFFB8B3A8),
+            muted = Color(0xFFA09A92),
+            muted2 = Color(0xFF7A756E),
+            fg = Color(0xFF1A1814),
+            fgDim = Color(0x661A1814),
+            accent = Color(0xFF1A1814),
+            accentDim = Color(0x0F1A1814),
+            playingBg = Color(0x0D1A1814),
+            playingBorder = Color(0x2E1A1814),
+            dragHandle = Color(0xFFC0BBB3),
+            removeColor = Color(0xFFB0ABA3),
+            progressFill = Color(0xFF1A1814),
+        )
+    }
+}

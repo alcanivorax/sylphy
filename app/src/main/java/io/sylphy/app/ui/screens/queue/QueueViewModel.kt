@@ -17,6 +17,9 @@ import javax.inject.Inject
 data class QueueUiState(
     val tracks: List<Track> = emptyList(),
     val activeIndex: Int = -1,
+    val positionMs: Long = 0L,
+    val durationMs: Long = 0L,
+    val shuffleEnabled: Boolean = false,
 ) {
     /** The currently playing track, or null if nothing is loaded. */
     val nowPlaying: Track? get() = tracks.getOrNull(activeIndex)
@@ -55,6 +58,18 @@ class QueueViewModel @Inject constructor(
     init {
         player.addListener(listener)
         refreshQueue()
+        viewModelScope.launch {
+            while (true) {
+                _uiState.update {
+                    it.copy(
+                        positionMs = player.currentPosition.coerceAtLeast(0L),
+                        durationMs = player.duration.takeIf { duration -> duration > 0L } ?: 0L,
+                        shuffleEnabled = player.shuffleModeEnabled,
+                    )
+                }
+                kotlinx.coroutines.delay(500L)
+            }
+        }
     }
 
     fun playAt(index: Int) {
@@ -94,6 +109,11 @@ class QueueViewModel @Inject constructor(
             player.removeMediaItem(i)
         }
         refreshQueue()
+    }
+
+    fun toggleShuffle() {
+        player.shuffleModeEnabled = !player.shuffleModeEnabled
+        _uiState.update { it.copy(shuffleEnabled = player.shuffleModeEnabled) }
     }
 
     private fun refreshQueue() {
