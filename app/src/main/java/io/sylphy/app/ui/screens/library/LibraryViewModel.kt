@@ -2,6 +2,8 @@ package io.sylphy.app.ui.screens.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.sylphy.app.core.extension.toAlbum
 import io.sylphy.app.core.extension.toArtist
@@ -63,6 +65,8 @@ data class LibraryUiState(
     val searchResults: SearchResults? = null,
     val scanStatus: ScanProgress = ScanProgress.Idle,
     val isLoading: Boolean = false,
+    val currentTrackId: String? = null,
+    val isPlaying: Boolean = false,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -74,14 +78,26 @@ class LibraryViewModel @Inject constructor(
     private val albumDao: AlbumDao,
     private val artistDao: ArtistDao,
     private val playlistDao: PlaylistDao,
+    private val player: Player,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
     private val searchQuery = MutableStateFlow("")
     private var scanJob: Job? = null
+    private val playerListener = object : Player.Listener {
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            refreshPlaybackState()
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            refreshPlaybackState()
+        }
+    }
 
     init {
+        player.addListener(playerListener)
+        refreshPlaybackState()
         observeLibrary()
         observeSearch()
     }
@@ -104,6 +120,8 @@ class LibraryViewModel @Inject constructor(
                 searchQuery = _uiState.value.searchQuery,
                 searchResults = _uiState.value.searchResults,
                 scanStatus = _uiState.value.scanStatus,
+                currentTrackId = _uiState.value.currentTrackId,
+                isPlaying = _uiState.value.isPlaying,
             )
         }
             .onEach { state -> _uiState.value = state }
@@ -215,6 +233,20 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             trackRepository.setFavorite(track.id, !track.isFavorite)
         }
+    }
+
+    private fun refreshPlaybackState() {
+        _uiState.update {
+            it.copy(
+                currentTrackId = player.currentMediaItem?.mediaId?.takeIf { id -> id.isNotBlank() },
+                isPlaying = player.isPlaying,
+            )
+        }
+    }
+
+    override fun onCleared() {
+        player.removeListener(playerListener)
+        super.onCleared()
     }
 
     private suspend fun refreshPlaylistStats(playlistId: String) {

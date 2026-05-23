@@ -176,7 +176,7 @@ fun SylphyNavGraph(
                     .background(if (isNothingOS) OLEDBlack else BgBase),
             ) { page ->
                 when (page) {
-                    PAGE_LIBRARY -> LibraryScreen(navController)
+                    PAGE_LIBRARY -> LibraryScreen(navController, themeMode = themeMode)
                     PAGE_PLAYER -> PlayerScreen(navController, themeMode = themeMode)
                     PAGE_QUEUE -> QueueScreen(themeMode = themeMode)
                     else -> PlayerScreen(navController, themeMode = themeMode)
@@ -208,7 +208,7 @@ fun SylphyNavGraph(
             ) {
                 composable(Screen.Player.route) { PlayerScreen(navController, themeMode = themeMode) }
                 composable(Screen.Queue.route) { QueueScreen(themeMode = themeMode) }
-                composable(Screen.Library.route) { LibraryScreen(navController) }
+                composable(Screen.Library.route) { LibraryScreen(navController, themeMode = themeMode) }
 
                 composable(
                     route = Screen.AlbumDetail.ROUTE,

@@ -279,3 +279,77 @@ fun queueChromeColors(mode: ThemeMode): QueueChromeColors {
         )
     }
 }
+
+data class LibraryChromeColors(
+    val bg: Color,
+    val surface2: Color,
+    val border: Color,
+    val border2: Color,
+    val muted: Color,
+    val muted2: Color,
+    val fg: Color,
+    val fgDim: Color,
+    val accent: Color,
+    val accentDim: Color,
+    val searchBg: Color,
+    val searchBorder: Color,
+    val rowHover: Color,
+    val sectionLetter: Color,
+    val playIndicator: Color,
+)
+
+fun libraryChromeColors(mode: ThemeMode): LibraryChromeColors {
+    return when (mode) {
+        ThemeMode.NOTHING_OS -> LibraryChromeColors(
+            bg = Color(0xFF000000),
+            surface2 = Color(0xFF1A1A1A),
+            border = Color(0xFF242424),
+            border2 = Color(0xFF2E2E2E),
+            muted = Color(0xFF444444),
+            muted2 = Color(0xFF666666),
+            fg = Color(0xFFF0F0F0),
+            fgDim = Color(0x80F0F0F0),
+            accent = Color(0xFFFF3B3B),
+            accentDim = Color(0x24FF3B3B),
+            searchBg = Color(0xFF141414),
+            searchBorder = Color(0xFF2A2A2A),
+            rowHover = Color(0x08FFFFFF),
+            sectionLetter = Color(0xFF333333),
+            playIndicator = Color(0xFFFF3B3B),
+        )
+        ThemeMode.MONOCHROME_DARK -> LibraryChromeColors(
+            bg = Color(0xFF0A0A0A),
+            surface2 = Color(0xFF191919),
+            border = Color(0xFF1E1E1E),
+            border2 = Color(0xFF282828),
+            muted = Color(0xFF3E3E3E),
+            muted2 = Color(0xFF5E5E5E),
+            fg = Color(0xFFE8E8E8),
+            fgDim = Color(0x73E8E8E8),
+            accent = Color(0xFFE8E8E8),
+            accentDim = Color(0x12E8E8E8),
+            searchBg = Color(0xFF141414),
+            searchBorder = Color(0xFF252525),
+            rowHover = Color(0x06FFFFFF),
+            sectionLetter = Color(0xFF2A2A2A),
+            playIndicator = Color(0xFFE8E8E8),
+        )
+        ThemeMode.MONOCHROME_LIGHT -> LibraryChromeColors(
+            bg = Color(0xFFF2F0EB),
+            surface2 = Color(0xFFE0DDD6),
+            border = Color(0xFFCCC8BF),
+            border2 = Color(0xFFB8B3A8),
+            muted = Color(0xFFA09A92),
+            muted2 = Color(0xFF7A756E),
+            fg = Color(0xFF1A1814),
+            fgDim = Color(0x661A1814),
+            accent = Color(0xFF1A1814),
+            accentDim = Color(0x121A1814),
+            searchBg = Color(0xFFE8E5DE),
+            searchBorder = Color(0xFFCCC8BF),
+            rowHover = Color(0x0A1A1814),
+            sectionLetter = Color(0xFFCCC8BF),
+            playIndicator = Color(0xFF1A1814),
+        )
+    }
+}
