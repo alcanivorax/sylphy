@@ -1,6 +1,5 @@
 package io.sylphy.app.ui.screens.player
 
-import android.net.Uri
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
@@ -26,20 +25,22 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeDown
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -50,7 +51,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,11 +63,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlurEffect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RenderEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -79,19 +76,22 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import io.sylphy.app.R
 import io.sylphy.app.data.model.RepeatMode
+import io.sylphy.app.data.model.ThemeMode
 import io.sylphy.app.data.model.Track
 import io.sylphy.app.ui.theme.DmSans
+import io.sylphy.app.ui.theme.PlayerChromeColors
 import io.sylphy.app.ui.theme.PlayerTheme
 import io.sylphy.app.ui.theme.SpaceMono
 import kotlinx.coroutines.delay
 
 @Composable
-fun BlurredArtBackground(artworkUri: String?) {
-    val painter = rememberAsyncImagePainter(artworkUri)
-
+fun BlurredArtBackground(
+    artworkUri: String?,
+    themeMode: ThemeMode,
+    colors: PlayerChromeColors,
+) {
     var currentUri by remember { mutableStateOf(artworkUri) }
     var targetAlpha by remember { mutableFloatStateOf(1f) }
     val alpha by animateFloatAsState(
@@ -109,10 +109,11 @@ fun BlurredArtBackground(artworkUri: String?) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(colors.bg)
             .graphicsLayer {
                 this.alpha = alpha
-                scaleX = 1.15f
-                scaleY = 1.15f
+                scaleX = 1.2f
+                scaleY = 1.2f
             }
     ) {
         Image(
@@ -121,18 +122,23 @@ fun BlurredArtBackground(artworkUri: String?) {
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
-                .blur(60.dp)
+                .blur(55.dp)
                 .graphicsLayer {
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                        renderEffect = BlurEffect(60f, 60f)
+                        renderEffect = BlurEffect(55f, 55f)
                     }
+                    this.alpha = if (themeMode == ThemeMode.MONOCHROME_LIGHT) 0.34f else 0.72f
                 }
         )
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Color.Black.copy(alpha = 0.82f)
+                    when (themeMode) {
+                        ThemeMode.MONOCHROME_LIGHT -> colors.bg.copy(alpha = 0.72f)
+                        ThemeMode.MONOCHROME_DARK -> colors.bg.copy(alpha = 0.75f)
+                        ThemeMode.NOTHING_OS -> colors.bg.copy(alpha = 0.78f)
+                    }
                 )
         )
     }
@@ -142,6 +148,7 @@ fun BlurredArtBackground(artworkUri: String?) {
 fun VinylArtwork(
     artworkUri: String?,
     isPlaying: Boolean,
+    colors: PlayerChromeColors,
     modifier: Modifier = Modifier
 ) {
     val discSize = 284.dp
@@ -172,17 +179,16 @@ fun VinylArtwork(
             .size(discSize)
             .graphicsLayer { rotationZ = rotation.value }
             .clip(CircleShape)
-            .background(PlayerTheme.Surface)
-            .border(1.dp, PlayerTheme.Border, CircleShape)
+            .background(colors.discOuter)
+            .border(1.dp, colors.border2, CircleShape)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
             val maxRadius = size.minDimension / 2f
-            val grooveColor = Color.White.copy(alpha = 0.025f)
             var r = 30.dp.toPx()
             while (r < maxRadius) {
                 drawCircle(
-                    color = grooveColor,
+                    color = colors.groove,
                     radius = r,
                     center = center,
                     style = Stroke(width = 1.dp.toPx())
@@ -198,7 +204,7 @@ fun VinylArtwork(
                 .clip(CircleShape)
                 .border(
                     width = 3.dp,
-                    color = PlayerTheme.Surface,
+                    color = colors.discOuter,
                     shape = CircleShape
                 )
         ) {
@@ -219,8 +225,8 @@ fun VinylArtwork(
                 .size(spindleSize)
                 .graphicsLayer { rotationZ = -rotation.value }
                 .clip(CircleShape)
-                .background(PlayerTheme.Black)
-                .border(2.dp, PlayerTheme.Border, CircleShape)
+                .background(colors.bg)
+                .border(2.dp, colors.border2, CircleShape)
         )
     }
 }
@@ -229,6 +235,7 @@ fun VinylArtwork(
 fun TrackInfoRow(
     track: Track,
     isFavourite: Boolean,
+    colors: PlayerChromeColors,
     onFavouriteToggle: () -> Unit
 ) {
     Row(
@@ -242,7 +249,7 @@ fun TrackInfoRow(
                 fontFamily = DmSans,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Medium,
-                color = PlayerTheme.White,
+                color = colors.fg,
                 letterSpacing = (-0.44).sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -253,7 +260,7 @@ fun TrackInfoRow(
                 fontFamily = SpaceMono,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Normal,
-                color = PlayerTheme.Muted,
+                color = colors.muted2,
                 letterSpacing = 1.1.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -279,7 +286,7 @@ fun TrackInfoRow(
             Icon(
                 imageVector = if (isFavourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                 contentDescription = "Favourite",
-                tint = if (isFavourite) PlayerTheme.Red else PlayerTheme.Muted,
+                tint = if (isFavourite) colors.accent else colors.muted,
                 modifier = Modifier.size(22.dp)
             )
         }
@@ -287,55 +294,10 @@ fun TrackInfoRow(
 }
 
 @Composable
-fun QualityBadgeRow(track: Track) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        // Derive format from mimeType or use a default
-        val format = when {
-            track.mimeType?.contains("flac", ignoreCase = true) == true -> "FLAC"
-            track.mimeType?.contains("wav", ignoreCase = true) == true -> "WAV"
-            track.mimeType?.contains("aac", ignoreCase = true) == true -> "AAC"
-            track.mimeType?.contains("ogg", ignoreCase = true) == true -> "OGG"
-            else -> "MP3"
-        }
-        QualityBadge(label = format, isAccent = false)
-        
-        track.bitRate?.let {
-            QualityBadge(label = "${it / 1000} kbps", isAccent = true)
-        }
-        
-        track.albumArtist?.let {
-            if (it != track.artist) {
-                QualityBadge(label = it, isAccent = false)
-            }
-        }
-    }
-}
-
-@Composable
-fun QualityBadge(label: String, isAccent: Boolean) {
-    val borderColor = if (isAccent) PlayerTheme.Red else PlayerTheme.Border
-    val textColor   = if (isAccent) PlayerTheme.Red else PlayerTheme.Muted
-
-    Box(
-        modifier = Modifier
-            .border(1.dp, borderColor, RoundedCornerShape(3.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
-    ) {
-        Text(
-            text = label.uppercase(),
-            fontFamily = SpaceMono,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold,
-            color = textColor,
-            letterSpacing = 1.08.sp
-        )
-    }
-}
-
-@Composable
 fun ScrubberSection(
     elapsedMs: Long,
     durationMs: Long,
+    colors: PlayerChromeColors,
     onSeek: (Long) -> Unit
 ) {
     val progress = if (durationMs > 0) elapsedMs.toFloat() / durationMs else 0f
@@ -349,7 +311,7 @@ fun ScrubberSection(
                     .fillMaxWidth()
                     .height(3.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(PlayerTheme.Border)
+                    .background(colors.border2)
                     .pointerInput(durationMs) {
                         detectTapGestures { offset ->
                             val ratio = (offset.x / size.width).coerceIn(0f, 1f)
@@ -368,7 +330,7 @@ fun ScrubberSection(
                         .fillMaxHeight()
                         .fillMaxWidth(progress)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(PlayerTheme.Red)
+                        .background(colors.progress)
                 )
             }
 
@@ -378,7 +340,7 @@ fun ScrubberSection(
                     .offset(x = thumbOffset.coerceAtLeast(0.dp), y = (-5.5).dp)
                     .size(14.dp)
                     .clip(CircleShape)
-                    .background(PlayerTheme.White)
+                    .background(colors.fg)
                     .pointerInput(durationMs) {
                         detectHorizontalDragGestures { change, _ ->
                             val trackPx = trackWidth.toPx()
@@ -399,13 +361,13 @@ fun ScrubberSection(
                 text = elapsedMs.toTimestamp(),
                 fontFamily = SpaceMono,
                 fontSize = 11.sp,
-                color = PlayerTheme.Muted
+                color = colors.muted
             )
             Text(
                 text = durationMs.toTimestamp(),
                 fontFamily = SpaceMono,
                 fontSize = 11.sp,
-                color = PlayerTheme.Muted
+                color = colors.muted
             )
         }
     }
@@ -423,6 +385,7 @@ fun ControlsRow(
     isPlaying: Boolean,
     isShuffle: Boolean,
     repeatMode: RepeatMode,
+    colors: PlayerChromeColors,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
@@ -436,6 +399,7 @@ fun ControlsRow(
     ) {
         ActiveDotIconButton(
             active = isShuffle,
+            colors = colors,
             onClick = onShuffle,
             contentDescription = "Shuffle"
         ) {
@@ -450,7 +414,7 @@ fun ControlsRow(
             Icon(
                 imageVector = Icons.Filled.SkipPrevious,
                 contentDescription = "Previous",
-                tint = PlayerTheme.WhiteDim,
+                tint = colors.fgDim,
                 modifier = Modifier.size(28.dp)
             )
         }
@@ -466,7 +430,7 @@ fun ControlsRow(
                 .size(68.dp)
                 .graphicsLayer { scaleX = playScale; scaleY = playScale }
                 .clip(RoundedCornerShape(3.dp))
-                .background(PlayerTheme.White)
+                .background(colors.playBg)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -475,7 +439,7 @@ fun ControlsRow(
             Icon(
                 imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                 contentDescription = if (isPlaying) "Pause" else "Play",
-                tint = PlayerTheme.Black,
+                tint = colors.playFg,
                 modifier = Modifier.size(26.dp)
             )
         }
@@ -484,13 +448,14 @@ fun ControlsRow(
             Icon(
                 imageVector = Icons.Filled.SkipNext,
                 contentDescription = "Next",
-                tint = PlayerTheme.WhiteDim,
+                tint = colors.fgDim,
                 modifier = Modifier.size(28.dp)
             )
         }
 
         ActiveDotIconButton(
             active = repeatMode != RepeatMode.OFF,
+            colors = colors,
             onClick = onRepeat,
             contentDescription = "Repeat"
         ) {
@@ -509,6 +474,7 @@ fun ControlsRow(
 @Composable
 fun ActiveDotIconButton(
     active: Boolean,
+    colors: PlayerChromeColors,
     onClick: () -> Unit,
     contentDescription: String,
     content: @Composable () -> Unit
@@ -519,7 +485,7 @@ fun ActiveDotIconButton(
             modifier = Modifier.size(44.dp)
         ) {
             CompositionLocalProvider(
-                LocalContentColor provides if (active) PlayerTheme.Red else PlayerTheme.WhiteDim
+                LocalContentColor provides if (active) colors.accent else colors.fgDim
             ) {
                 content()
             }
@@ -530,88 +496,7 @@ fun ActiveDotIconButton(
                     .offset(y = 2.dp)
                     .size(4.dp)
                     .clip(CircleShape)
-                    .background(PlayerTheme.Red)
-            )
-        }
-    }
-}
-
-@Composable
-fun SecondaryRow(
-    speed: Float,
-    volume: Float,
-    onSpeedCycle: () -> Unit,
-    onVolumeChange: (Float) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(3.dp))
-                .background(PlayerTheme.Surface2)
-                .border(1.dp, PlayerTheme.Border, RoundedCornerShape(3.dp))
-                .clickable { onSpeedCycle() }
-                .padding(horizontal = 10.dp, vertical = 5.dp)
-        ) {
-            Text(
-                text = "${if (speed == speed.toLong().toFloat()) speed.toInt() else speed}×",
-                fontFamily = SpaceMono,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = PlayerTheme.Muted,
-                letterSpacing = 1.1.sp
-            )
-        }
-
-        Spacer(Modifier.width(16.dp))
-
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.VolumeDown,
-                contentDescription = null,
-                tint = PlayerTheme.Muted,
-                modifier = Modifier.size(16.dp)
-            )
-
-            BoxWithConstraints(modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(PlayerTheme.Border)
-                        .pointerInput(Unit) {
-                            detectTapGestures { offset ->
-                                onVolumeChange((offset.x / size.width).coerceIn(0f, 1f))
-                            }
-                        }
-                        .pointerInput(Unit) {
-                            detectHorizontalDragGestures { change, _ ->
-                                onVolumeChange((change.position.x / size.width).coerceIn(0f, 1f))
-                            }
-                        }
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(volume)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(PlayerTheme.WhiteDim)
-                    )
-                }
-            }
-
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                contentDescription = null,
-                tint = PlayerTheme.Muted,
-                modifier = Modifier.size(16.dp)
+                    .background(colors.accent)
             )
         }
     }
@@ -626,13 +511,15 @@ fun BottomNav(
     onPlayer: () -> Unit,
     onQueue: () -> Unit,
 ) {
+    val borderColor = PlayerTheme.Border
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .height(68.dp)
+            .navigationBarsPadding()
             .drawBehind {
                 drawLine(
-                    color = Color(0xFF2A2A2A),
+                    color = borderColor,
                     start = Offset(0f, 0f),
                     end = Offset(size.width, 0f),
                     strokeWidth = 1.dp.toPx()
@@ -642,7 +529,7 @@ fun BottomNav(
         listOf(
             Triple(BottomNavTab.LIBRARY, "LIBRARY", Icons.Filled.LibraryMusic),
             Triple(BottomNavTab.PLAYER,  "PLAYER",  Icons.Filled.PlayArrow),
-            Triple(BottomNavTab.QUEUE,   "QUEUE",   Icons.Filled.QueueMusic),
+            Triple(BottomNavTab.QUEUE,   "QUEUE",   Icons.AutoMirrored.Filled.QueueMusic),
         ).forEach { (tab, label, icon) ->
             val isActive = tab == activeTab
             Box(
@@ -674,19 +561,19 @@ fun BottomNav(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxSize().padding(bottom = 10.dp)
+                    modifier = Modifier.fillMaxSize().padding(bottom = 8.dp)
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = label,
                         tint = if (isActive) PlayerTheme.White else PlayerTheme.Muted,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = label,
                         fontFamily = SpaceMono,
-                        fontSize = 9.sp,
+                        fontSize = 8.sp,
                         fontWeight = FontWeight.Normal,
                         color = if (isActive) PlayerTheme.White else PlayerTheme.Muted,
                         letterSpacing = 1.62.sp
@@ -698,23 +585,64 @@ fun BottomNav(
 }
 
 @Composable
-fun GrainOverlay() {
-    // Optional: Add a subtle grain overlay if desired
+fun GrainOverlay(colors: PlayerChromeColors) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val step = 3.dp.toPx()
+        var y = 0f
+        var row = 0
+        while (y < size.height) {
+            var x = if (row % 2 == 0) 0f else step / 2f
+            while (x < size.width) {
+                drawCircle(
+                    color = colors.fg.copy(alpha = 0.018f),
+                    radius = 0.35.dp.toPx(),
+                    center = Offset(x, y),
+                )
+                x += step
+            }
+            y += step
+            row++
+        }
+    }
 }
 
 @Composable
-fun TopNav(onBack: () -> Unit) {
+fun TopNav(
+    colors: PlayerChromeColors,
+    onBack: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.Start
+            .statusBarsPadding()
+            .padding(start = 20.dp, end = 20.dp, top = 8.dp)
+            .height(40.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onBack) {
+        IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
             Icon(
-                imageVector = Icons.Filled.SkipPrevious, // use a back icon if available
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
-                tint = PlayerTheme.White
+                tint = colors.muted2,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Text(
+            text = "Now Playing",
+            fontFamily = SpaceMono,
+            fontSize = 9.sp,
+            color = colors.fgDim,
+            letterSpacing = 1.98.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Clip,
+        )
+        IconButton(onClick = {}, modifier = Modifier.size(36.dp)) {
+            Icon(
+                imageVector = Icons.Filled.MoreVert,
+                contentDescription = "More options",
+                tint = colors.muted2,
+                modifier = Modifier.size(18.dp),
             )
         }
     }

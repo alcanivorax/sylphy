@@ -1,16 +1,13 @@
 package io.sylphy.app.ui.screens.player
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,16 +15,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -39,15 +34,11 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import io.sylphy.app.data.model.ThemeMode
 import io.sylphy.app.ui.components.player.CDDisc
 import io.sylphy.app.ui.navigation.Screen
-import io.sylphy.app.ui.theme.BgBase
-import io.sylphy.app.ui.theme.BorderDefault
-import io.sylphy.app.ui.theme.ChipCorner
 import io.sylphy.app.ui.theme.FgMuted
-import io.sylphy.app.ui.theme.FgPrimary
 import io.sylphy.app.ui.theme.Layout
-import io.sylphy.app.ui.theme.PlayerTheme
 import io.sylphy.app.ui.theme.Spacing
 import io.sylphy.app.ui.theme.SylphyType
+import io.sylphy.app.ui.theme.playerChromeColors
 
 @Composable
 fun PlayerScreen(
@@ -57,10 +48,11 @@ fun PlayerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val track = uiState.activeTrack
+    val colors = playerChromeColors(themeMode)
 
     // Edge-to-edge: transparent status + nav bars
     val systemUiController = rememberSystemUiController()
-    val isLight = PlayerTheme.White.luminance() > 0.5f // check if current theme is light
+    val isLight = colors.bg.luminance() > 0.5f
     SideEffect {
         systemUiController.setSystemBarsColor(Color.Transparent, darkIcons = isLight)
     }
@@ -68,7 +60,7 @@ fun PlayerScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PlayerTheme.Black)
+            .background(colors.bg)
     ) {
         if (track == null) {
             EmptyPlayerState(
@@ -77,130 +69,113 @@ fun PlayerScreen(
             return@Box
         }
 
-        // Layer 0: blurred art background
-        BlurredArtBackground(artworkUri = track.artworkPath)
+        BlurredArtBackground(artworkUri = track.artworkPath, themeMode = themeMode, colors = colors)
+        GrainOverlay(colors = colors)
 
-        // Layer 1: grain overlay
-        GrainOverlay()
-
-        // Layer 2: UI
         Column(modifier = Modifier.fillMaxSize()) {
 
-            TopNav(onBack = { navController.popBackStack() })
+            TopNav(
+                colors = colors,
+                onBack = { navController.popBackStack() },
+            )
 
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 28.dp),
-                contentAlignment = Alignment.Center,
+                    .padding(horizontal = 26.dp),
+                contentAlignment = Alignment.TopCenter,
             ) {
-                Column(
-                    modifier = Modifier.widthIn(max = 420.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .widthIn(max = 420.dp)
+                        .fillMaxWidth(),
                 ) {
-                    VinylArtwork(
-                        artworkUri = track.artworkPath,
-                        isPlaying = uiState.isPlaying,
-                    )
+                    val compactHeight = maxHeight < 600.dp
+                    val topGap = if (compactHeight) 10.dp else 18.dp
+                    val infoGap = if (compactHeight) 20.dp else 24.dp
+                    val scrubberGap = if (compactHeight) 18.dp else 22.dp
+                    val controlsGap = if (compactHeight) 20.dp else 22.dp
 
-                    Spacer(Modifier.height(36.dp))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Spacer(Modifier.height(topGap))
 
-                    TrackInfoRow(
-                        track = track,
-                        isFavourite = track.isFavorite,
-                        onFavouriteToggle = viewModel::toggleFavorite,
-                    )
+                        FadeUp(delayMillis = 50) {
+                            VinylArtwork(
+                                artworkUri = track.artworkPath,
+                                isPlaying = uiState.isPlaying,
+                                colors = colors,
+                            )
+                        }
 
-                    Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(infoGap))
 
-                    QualityBadgeRow(track = track)
+                        FadeUp(delayMillis = 120) {
+                            TrackInfoRow(
+                                track = track,
+                                isFavourite = track.isFavorite,
+                                colors = colors,
+                                onFavouriteToggle = viewModel::toggleFavorite,
+                            )
+                        }
 
-                    Spacer(Modifier.height(32.dp))
+                        Spacer(Modifier.height(scrubberGap))
 
-                    ScrubberSection(
-                        elapsedMs = uiState.position,
-                        durationMs = uiState.duration,
-                        onSeek = viewModel::seekTo,
-                    )
+                        FadeUp(delayMillis = 200) {
+                            ScrubberSection(
+                                elapsedMs = uiState.position,
+                                durationMs = uiState.duration,
+                                colors = colors,
+                                onSeek = viewModel::seekTo,
+                            )
+                        }
 
-                    Spacer(Modifier.height(36.dp))
+                        Spacer(Modifier.height(controlsGap))
 
-                    ControlsRow(
-                        isPlaying = uiState.isPlaying,
-                        isShuffle = uiState.shuffleEnabled,
-                        repeatMode = uiState.repeatMode,
-                        onPlayPause = viewModel::playPause,
-                        onNext = viewModel::next,
-                        onPrevious = viewModel::previous,
-                        onShuffle = viewModel::toggleShuffle,
-                        onRepeat = viewModel::cycleRepeat,
-                    )
-
-                    Spacer(Modifier.height(28.dp))
-
-                    SecondaryRow(
-                        speed = uiState.speed,
-                        volume = uiState.volume,
-                        onSpeedCycle = viewModel::cycleSpeed,
-                        onVolumeChange = viewModel::adjustVolume,
-                    )
+                        FadeUp(delayMillis = 250) {
+                            ControlsRow(
+                                isPlaying = uiState.isPlaying,
+                                isShuffle = uiState.shuffleEnabled,
+                                repeatMode = uiState.repeatMode,
+                                colors = colors,
+                                onPlayPause = viewModel::playPause,
+                                onNext = viewModel::next,
+                                onPrevious = viewModel::previous,
+                                onShuffle = viewModel::toggleShuffle,
+                                onRepeat = viewModel::cycleRepeat,
+                            )
+                        }
+                    }
                 }
             }
-
-            BottomNav(
-                activeTab = BottomNavTab.PLAYER,
-                onLibrary = { navController.navigate(Screen.Library.route) },
-                onQueue = { navController.navigate(Screen.Queue.route) },
-                onPlayer = {},
-            )
         }
     }
 }
 
 @Composable
-private fun SpeedChip(
-    speed: Float,
-    onClick: () -> Unit,
+private fun FadeUp(
+    delayMillis: Int,
+    content: @Composable () -> Unit,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val scale by animateFloatAsState(
-        targetValue = if (interactionSource.collectIsPressedAsState().value) 0.95f else 1f,
-        animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
-        label = "speed_chip_scale",
-    )
-    
-    Text(
-        text = "${speed}x",
-        style = SylphyType.CodeSmall,
-        color = FgPrimary,
-        modifier = Modifier
-            .scale(scale)
-            .border(Layout.borderThin, BorderDefault, ChipCorner)
-            .clip(RoundedCornerShape(6.dp))
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
-    )
-}
+    val alpha = remember { Animatable(0f) }
+    val y = remember { Animatable(14f) }
+    LaunchedEffect(Unit) {
+        alpha.animateTo(1f, tween(durationMillis = 500, delayMillis = delayMillis))
+    }
+    LaunchedEffect(Unit) {
+        y.animateTo(0f, tween(durationMillis = 500, delayMillis = delayMillis))
+    }
 
-@Composable
-private fun VolumeIndicator(volume: Float) {
-    Column(
+    Box(
         modifier = Modifier
-            .background(BgBase)
-            .border(Layout.borderThin, BorderDefault, ChipCorner)
-            .padding(Spacing.md),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .fillMaxWidth()
+            .graphicsLayer {
+                this.alpha = alpha.value
+                translationY = y.value
+            },
+        contentAlignment = Alignment.Center,
     ) {
-        Text("VOL ${(volume * 100).toInt()}", style = SylphyType.Code, color = FgPrimary)
-        Spacer(Modifier.height(Spacing.sm))
-        Box(Modifier.size(width = 160.dp, height = Spacing.px1).background(FgMuted)) {
-            Box(Modifier.fillMaxWidth(volume.coerceIn(0f, 1f)).height(Spacing.px1).background(FgPrimary))
-        }
+        content()
     }
 }
 

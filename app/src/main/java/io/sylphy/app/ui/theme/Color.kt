@@ -53,20 +53,20 @@ val MonochromeDarkScheme = darkColorScheme(
  * Warm white, airy, dark charcoal text.
  */
 val MonochromeLightScheme = lightColorScheme(
-    primary              = Charcoal,
-    onPrimary            = PaperWhite,
-    primaryContainer     = Color(0xFFF0F0F0),
+    primary              = Color(0xFF1A1814),
+    onPrimary            = Color(0xFFF2F0EB),
+    primaryContainer     = Color(0xFFE8E5DE),
     onPrimaryContainer   = Charcoal,
     secondary            = Color(0x99111111),
     onSecondary          = PaperWhite,
-    background           = PaperWhite,
-    onBackground         = Charcoal,
-    surface              = Color(0xFFF5F5F5),
-    onSurface            = Charcoal,
-    surfaceVariant       = Color(0xFFEEEEEE),
+    background           = Color(0xFFF2F0EB),
+    onBackground         = Color(0xFF1A1814),
+    surface              = Color(0xFFE8E5DE),
+    onSurface            = Color(0xFF1A1814),
+    surfaceVariant       = Color(0xFFDEDAD2),
     onSurfaceVariant     = Color(0x99111111),
-    outline              = Color(0xFFDDDDDD),
-    outlineVariant       = Color(0xFFEEEEEE),
+    outline              = Color(0xFFCCC8BF),
+    outlineVariant       = Color(0xFFB8B3A8),
     scrim                = Color.Black,
 )
 
@@ -142,4 +142,66 @@ object PlayerTheme {
 
     private val isLight: Boolean @Composable get() = MaterialTheme.colorScheme.background.luminance() > 0.5f
     private val isNothingOS: Boolean @Composable get() = MaterialTheme.colorScheme.primary == NothingRed
+}
+
+data class PlayerChromeColors(
+    val bg: Color,
+    val border2: Color,
+    val muted: Color,
+    val muted2: Color,
+    val fg: Color,
+    val fgDim: Color,
+    val accent: Color,
+    val progress: Color,
+    val playBg: Color,
+    val playFg: Color,
+    val discOuter: Color,
+    val groove: Color,
+)
+
+fun playerChromeColors(mode: ThemeMode): PlayerChromeColors {
+    return when (mode) {
+        ThemeMode.MONOCHROME_DARK -> PlayerChromeColors(
+            bg = Color(0xFF0A0A0A),
+            border2 = Color(0xFF2E2E2E),
+            muted = Color(0xFF4A4A4A),
+            muted2 = Color(0xFF666666),
+            fg = Color(0xFFE8E8E8),
+            fgDim = Color(0x80E8E8E8),
+            accent = Color(0xFFE8E8E8),
+            progress = Color(0xFFE8E8E8),
+            playBg = Color(0xFFE8E8E8),
+            playFg = Color(0xFF0A0A0A),
+            discOuter = Color(0xFF0F0F0F),
+            groove = Color(0x05FFFFFF),
+        )
+        ThemeMode.MONOCHROME_LIGHT -> PlayerChromeColors(
+            bg = Color(0xFFF2F0EB),
+            border2 = Color(0xFFB8B3A8),
+            muted = Color(0xFF9B9690),
+            muted2 = Color(0xFF7A756E),
+            fg = Color(0xFF1A1814),
+            fgDim = Color(0x731A1814),
+            accent = Color(0xFF1A1814),
+            progress = Color(0xFF1A1814),
+            playBg = Color(0xFF1A1814),
+            playFg = Color(0xFFF2F0EB),
+            discOuter = Color(0xFFDEDAD2),
+            groove = Color(0x0A1A1814),
+        )
+        ThemeMode.NOTHING_OS -> PlayerChromeColors(
+            bg = Color(0xFF000000),
+            border2 = Color(0xFF2A2A2A),
+            muted = Color(0xFF555555),
+            muted2 = Color(0xFF555555),
+            fg = Color(0xFFF0F0F0),
+            fgDim = Color(0x8CF0F0F0),
+            accent = Color(0xFFFF3B3B),
+            progress = Color(0xFFFF3B3B),
+            playBg = Color(0xFFF0F0F0),
+            playFg = Color(0xFF000000),
+            discOuter = Color(0xFF141414),
+            groove = Color(0x06FFFFFF),
+        )
+    }
 }
