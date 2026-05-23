@@ -83,10 +83,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -96,9 +94,6 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import io.sylphy.app.R
 import io.sylphy.app.core.util.toHhMm
 import io.sylphy.app.core.util.toMmSs
 import io.sylphy.app.core.util.toTrackCountLabel
@@ -1059,14 +1054,7 @@ private fun ArtworkImage(
     colors: LibraryChromeColors,
     modifier: Modifier,
 ) {
-    AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
-            .data(artworkPath)
-            .crossfade(true)
-            .build(),
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        error = painterResource(R.drawable.ic_sylphy_background),
+    Box(
         modifier = modifier
             .clip(SmallShape)
             .background(colors.surface2)

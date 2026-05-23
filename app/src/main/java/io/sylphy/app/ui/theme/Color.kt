@@ -221,6 +221,7 @@ data class QueueChromeColors(
     val playingBorder: Color,
     val dragHandle: Color,
     val removeColor: Color,
+    val removeHover: Color,
     val progressFill: Color,
 )
 
@@ -241,6 +242,7 @@ fun queueChromeColors(mode: ThemeMode): QueueChromeColors {
             playingBorder = Color(0x38FF3B3B),
             dragHandle = Color(0xFF333333),
             removeColor = Color(0xFF444444),
+            removeHover = Color(0xFFFF3B3B),
             progressFill = Color(0xFFFF3B3B),
         )
         ThemeMode.MONOCHROME_DARK -> QueueChromeColors(
@@ -258,6 +260,7 @@ fun queueChromeColors(mode: ThemeMode): QueueChromeColors {
             playingBorder = Color(0x24E8E8E8),
             dragHandle = Color(0xFF2E2E2E),
             removeColor = Color(0xFF3A3A3A),
+            removeHover = Color(0xFF888888),
             progressFill = Color(0xFFE8E8E8),
         )
         ThemeMode.MONOCHROME_LIGHT -> QueueChromeColors(
@@ -275,6 +278,7 @@ fun queueChromeColors(mode: ThemeMode): QueueChromeColors {
             playingBorder = Color(0x2E1A1814),
             dragHandle = Color(0xFFC0BBB3),
             removeColor = Color(0xFFB0ABA3),
+            removeHover = Color(0xFF555050),
             progressFill = Color(0xFF1A1814),
         )
     }

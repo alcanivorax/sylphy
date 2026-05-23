@@ -57,20 +57,17 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import io.sylphy.app.R
 import io.sylphy.app.core.util.toMmSs
 import io.sylphy.app.data.model.ThemeMode
@@ -242,14 +239,7 @@ private fun NowPlayingCard(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(modifier = Modifier.size(52.dp)) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(track.artworkPath)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                error = painterResource(R.drawable.ic_sylphy_background),
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(PanelShape)
@@ -411,15 +401,15 @@ private fun UpNextHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(
-            text = "Up Next",
-            fontFamily = SpaceMono,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold,
-            color = colors.muted,
-            letterSpacing = 1.8.sp,
-            lineHeight = 12.sp,
-        )
+            Text(
+                text = "UP NEXT",
+                fontFamily = SpaceMono,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.muted,
+                letterSpacing = 1.8.sp,
+                lineHeight = 12.sp,
+            )
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -432,7 +422,7 @@ private fun UpNextHeader(
                 letterSpacing = 0.9.sp,
             )
             Text(
-                text = "Clear",
+                text = "CLEAR",
                 fontFamily = SpaceMono,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
@@ -586,17 +576,11 @@ private fun QueueRowItem(
             fontWeight = FontWeight.Bold,
             color = colors.muted,
             letterSpacing = 0.4.sp,
+            textAlign = TextAlign.End,
             modifier = Modifier.width(18.dp),
         )
 
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(track.artworkPath)
-                .crossfade(true)
-                .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            error = painterResource(R.drawable.ic_sylphy_background),
+        Box(
             modifier = Modifier
                 .size(44.dp)
                 .clip(PanelShape)
@@ -636,11 +620,16 @@ private fun QueueRowItem(
             letterSpacing = 0.4.sp,
         )
 
-        IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
+        val removeInteractionSource = remember { MutableInteractionSource() }
+        val isRemovePressed by removeInteractionSource.collectIsPressedAsState()
+        IconButton(
+            onClick = onRemove,
+            modifier = Modifier.size(24.dp),
+        ) {
             Icon(
                 painter = painterResource(R.drawable.ic_remove),
                 contentDescription = "Remove from queue",
-                tint = colors.removeColor,
+                tint = if (isRemovePressed) colors.removeHover else colors.removeColor,
                 modifier = Modifier.size(13.dp),
             )
         }

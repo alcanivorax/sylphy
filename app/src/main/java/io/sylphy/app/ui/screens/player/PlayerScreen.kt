@@ -145,6 +145,21 @@ fun PlayerScreen(
                                 onRepeat = viewModel::cycleRepeat,
                             )
                         }
+
+                        Spacer(Modifier.height(controlsGap))
+
+                        FadeUp(delayMillis = 300) {
+                            SecondaryRow(
+                                speed = uiState.speed,
+                                volume = uiState.volume,
+                                colors = colors,
+                                onCycleSpeed = viewModel::cycleSpeed,
+                                onVolumeChange = { ratio ->
+                                    val delta = ratio - uiState.volume
+                                    viewModel.adjustVolume(delta)
+                                },
+                            )
+                        }
                     }
                 }
             }

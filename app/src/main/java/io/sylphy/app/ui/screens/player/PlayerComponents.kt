@@ -3,9 +3,7 @@ package io.sylphy.app.ui.screens.player
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,6 +31,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MoreVert
@@ -47,32 +47,22 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
 import io.sylphy.app.R
 import io.sylphy.app.data.model.RepeatMode
 import io.sylphy.app.data.model.ThemeMode
@@ -82,7 +72,6 @@ import io.sylphy.app.ui.theme.DmSans
 import io.sylphy.app.ui.theme.PlayerChromeColors
 import io.sylphy.app.ui.theme.PlayerTheme
 import io.sylphy.app.ui.theme.SpaceMono
-import kotlinx.coroutines.delay
 
 @Composable
 fun BlurredArtBackground(
@@ -90,56 +79,11 @@ fun BlurredArtBackground(
     themeMode: ThemeMode,
     colors: PlayerChromeColors,
 ) {
-    var currentUri by remember { mutableStateOf(artworkUri) }
-    var targetAlpha by remember { mutableFloatStateOf(1f) }
-    val alpha by animateFloatAsState(
-        targetValue = targetAlpha,
-        animationSpec = tween(300),
-        label = "bgCrossfade"
-    )
-    LaunchedEffect(artworkUri) {
-        targetAlpha = 0f
-        delay(150)
-        currentUri = artworkUri
-        targetAlpha = 1f
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(colors.bg)
-            .graphicsLayer {
-                this.alpha = alpha
-                scaleX = 1.2f
-                scaleY = 1.2f
-            }
-    ) {
-        Image(
-            painter = rememberAsyncImagePainter(currentUri),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxSize()
-                .blur(55.dp)
-                .graphicsLayer {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                        renderEffect = BlurEffect(55f, 55f)
-                    }
-                    this.alpha = if (themeMode == ThemeMode.MONOCHROME_LIGHT) 0.34f else 0.72f
-                }
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    when (themeMode) {
-                        ThemeMode.MONOCHROME_LIGHT -> colors.bg.copy(alpha = 0.72f)
-                        ThemeMode.MONOCHROME_DARK -> colors.bg.copy(alpha = 0.75f)
-                        ThemeMode.NOTHING_OS -> colors.bg.copy(alpha = 0.78f)
-                    }
-                )
-        )
-    }
+    )
 }
 
 @Composable
@@ -195,28 +139,6 @@ fun VinylArtwork(
                     )
                     r += 5.dp.toPx()
                 }
-            }
-
-            Box(
-                modifier = Modifier
-                    .size(artSize)
-                    .clip(CircleShape)
-                    .border(
-                        width = 3.dp,
-                        color = colors.discOuter,
-                        shape = CircleShape
-                    )
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(artworkUri)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Album art",
-                    contentScale = ContentScale.Crop,
-                    error = painterResource(R.drawable.ic_sylphy_background), // placeholder
-                    modifier = Modifier.fillMaxSize().clip(CircleShape)
-                )
             }
 
             Box(
@@ -490,6 +412,97 @@ fun ControlsRow(
     }
 }
 
+@Composable
+fun SecondaryRow(
+    speed: Float,
+    volume: Float,
+    colors: PlayerChromeColors,
+    onCycleSpeed: () -> Unit,
+    onVolumeChange: (Float) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(3.dp))
+                .background(PlayerTheme.Surface2)
+                .border(1.dp, PlayerTheme.Border, RoundedCornerShape(3.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onCycleSpeed,
+                )
+                .padding(horizontal = 10.dp, vertical = 5.dp),
+        ) {
+            Text(
+                text = "${"%.1f".format(speed)}×",
+                fontFamily = SpaceMono,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.1.sp,
+                color = colors.muted,
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.VolumeDown,
+                contentDescription = "Volume",
+                tint = colors.muted,
+                modifier = Modifier.size(16.dp),
+            )
+
+            Spacer(Modifier.width(8.dp))
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(colors.border2)
+                    .pointerInput(Unit) {
+                        detectTapGestures { offset ->
+                            val ratio = (offset.x / size.width).coerceIn(0f, 1f)
+                            onVolumeChange(ratio)
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures { change, _ ->
+                            val ratio = (change.position.x / size.width).coerceIn(0f, 1f)
+                            onVolumeChange(ratio)
+                        }
+                    }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(volume)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(PlayerTheme.WhiteDim)
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                contentDescription = "Volume",
+                tint = colors.muted,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
 @Composable
 fun ActiveDotIconButton(
     active: Boolean,

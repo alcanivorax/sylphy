@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,17 +17,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import io.sylphy.app.ui.theme.BgElevated
-import io.sylphy.app.ui.theme.Duration
-import io.sylphy.app.ui.theme.FgSubtle
 import io.sylphy.app.ui.theme.Layout
-import io.sylphy.app.ui.theme.SylphyType
 
 @Composable
 fun CDDisc(
@@ -104,9 +95,6 @@ fun CDDisc(
                 )
             }
 
-            // Album art embedded in disc center
-            CDArtwork(artworkPath, size = discSize * 0.65f)
-
             // Center hub
             CDHub(hubSize = discSize * 0.08f)
         }
@@ -140,66 +128,6 @@ fun CDDisc(
                 style = Stroke(width = 1.5f),
             )
         }
-    }
-}
-
-@Composable
-private fun CDArtwork(
-    artworkPath: String?,
-    size: Dp,
-) {
-    val context = LocalContext.current
-
-    Box(
-        modifier = Modifier
-            .size(size)
-            .clip(CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (!artworkPath.isNullOrBlank()) {
-            val imageData = when {
-                artworkPath.startsWith("content://") -> artworkPath
-                artworkPath.startsWith("file://") -> artworkPath
-                else -> "file://$artworkPath"
-            }
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(imageData)
-                    .crossfade(Duration.Slow)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(BgElevated),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "SYLPHY",
-                    style = SylphyType.CodeSmall,
-                    color = FgSubtle.copy(alpha = 0.5f),
-                )
-            }
-        }
-
-        // Subtle overlay for depth integration
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color(0xFF000000).copy(alpha = 0.15f),
-                        ),
-                    ),
-                    shape = CircleShape,
-                ),
-        )
     }
 }
 

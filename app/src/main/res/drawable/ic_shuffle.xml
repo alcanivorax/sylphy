@@ -3,16 +3,15 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <path
-        android:fillColor="#FAFAFA"
-        android:fillType="evenOdd"
-        android:pathData="M4,7 L8,7 L16,17 L20,17 L20,15 L23,18 L20,21 L20,19 L15,19 L7,9 L4,9 Z" />
-    <path
-        android:fillColor="#FAFAFA"
-        android:fillType="evenOdd"
-        android:pathData="M16,7 L20,7 L20,5 L23,8 L20,11 L20,9 L17,9 L14,12 L13,10 Z" />
-    <path
-        android:fillColor="#FAFAFA"
-        android:fillType="evenOdd"
-        android:pathData="M4,17 L8,17 L11,14 L12,16 L9,19 L4,19 Z" />
+    <group
+        android:strokeWidth="2"
+        android:strokeColor="#FAFAFA"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent">
+        <path android:pathData="M16,3L21,3L21,8" />
+        <path android:pathData="M4,20L21,3" />
+        <path android:pathData="M21,16L21,21L16,21" />
+        <path android:pathData="M15,15L21,21" />
+    </group>
 </vector>
