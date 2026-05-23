@@ -6,7 +6,8 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -19,7 +20,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,6 +38,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Add
@@ -53,9 +55,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,13 +64,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -92,6 +93,7 @@ import io.sylphy.app.ui.components.shared.ContextMenuSheet
 import io.sylphy.app.ui.components.shared.SylphyButton
 import io.sylphy.app.ui.components.shared.SylphyDivider
 import io.sylphy.app.ui.components.shared.SylphySearchBar
+import io.sylphy.app.ui.components.shared.SylphyTabBar
 import io.sylphy.app.ui.navigation.Screen
 import io.sylphy.app.ui.theme.BgBase
 import io.sylphy.app.ui.theme.BgElevated
@@ -105,9 +107,9 @@ import io.sylphy.app.ui.theme.FgPrimary
 import io.sylphy.app.ui.theme.FgSubtle
 import io.sylphy.app.ui.theme.Layout
 import io.sylphy.app.ui.theme.Spacing
-import io.sylphy.app.ui.theme.SylphyEasing
 import io.sylphy.app.ui.theme.SylphyType
-import kotlin.math.roundToInt
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -121,12 +123,16 @@ fun LibraryScreen(
     var playlistTarget by remember { mutableStateOf<Track?>(null) }
     var showCreatePlaylist by remember { mutableStateOf(false) }
 
+    // ── Permission handling ──────────────────────────────────────────────────
     val mediaPermission =
         if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO
         else Manifest.permission.READ_EXTERNAL_STORAGE
+
     var hasMediaPermission by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, mediaPermission) == PackageManager.PERMISSION_GRANTED,
+            ContextCompat.checkSelfPermission(
+                context, mediaPermission,
+            ) == PackageManager.PERMISSION_GRANTED,
         )
     }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -136,39 +142,57 @@ fun LibraryScreen(
         if (granted) viewModel.scanLibrary()
     }
 
+    // ── Root layout ──────────────────────────────────────────────────────────
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(BgBase)
-            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
+            // top = md (16dp) gives the header room without eating too much space
+            // no bottom padding — nav bar inset is handled by the pager / NavGraph
+            .padding(top = Spacing.md),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("LIBRARY", style = SylphyType.Display, color = FgPrimary, modifier = Modifier.weight(1f))
-            IconButton(onClick = { navController.navigate(Screen.Stats.route) }) {
-                Icon(Icons.Default.QueryStats, contentDescription = "Stats", tint = FgPrimary)
-            }
-            IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
-                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = FgPrimary)
-            }
-            SylphyButton(
-                text = if (hasMediaPermission) "Scan" else "Permission",
-                variant = ButtonVariant.Outline,
-                onClick = {
-                    if (hasMediaPermission) viewModel.scanLibrary()
-                    else permissionLauncher.launch(mediaPermission)
-                },
-            )
-        }
+        // Header row
+        LibraryHeader(
+            hasPermission = hasMediaPermission,
+            isScanning = uiState.scanStatus is ScanProgress.Scanning,
+            onStats = { navController.navigate(Screen.Stats.route) },
+            onSettings = { navController.navigate(Screen.Settings.route) },
+            onScan = {
+                if (hasMediaPermission) viewModel.scanLibrary()
+                else permissionLauncher.launch(mediaPermission)
+            },
+            modifier = Modifier.padding(horizontal = Spacing.md),
+        )
 
         Spacer(Modifier.height(Spacing.md))
+
+        // Search bar
         SylphySearchBar(
             value = uiState.searchQuery,
             onValueChange = viewModel::setSearchQuery,
             placeholder = "Search songs, albums, artists",
+            modifier = Modifier.padding(horizontal = Spacing.md),
         )
-        ScanProgressBar(uiState.scanStatus)
-        LibrarySubTabs(uiState.selectedTab, viewModel::selectTab)
 
+        // Scan progress bar — appears below search when scanning
+        ScanProgressBar(
+            scanStatus = uiState.scanStatus,
+            modifier = Modifier.padding(horizontal = Spacing.md),
+        )
+
+        Spacer(Modifier.height(Spacing.sm))
+
+        // Segment tab bar — uses SylphyTabBar (replaces custom LibrarySubTabs)
+        val tabLabels = LibraryTab.entries.map { it.name }
+        SylphyTabBar(
+            tabs = tabLabels,
+            selectedIndex = uiState.selectedTab.ordinal,
+            onTabSelected = { index ->
+                viewModel.selectTab(LibraryTab.entries[index])
+            },
+        )
+
+        // Content area
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -209,23 +233,28 @@ fun LibraryScreen(
         }
     }
 
+    // ── Overlays (rendered outside the Column so they sit above everything) ──
+
     contextMenuTrack?.let { track ->
         ContextMenuSheet(
             track = track,
             onDismiss = { contextMenuTrack = null },
             actions = listOf(
-                ContextMenuAction("Play next", Icons.Default.PlayArrow) {
-                    viewModel.playTrack(track, listOf(track))
-                },
-                ContextMenuAction("Add to playlist", Icons.AutoMirrored.Filled.PlaylistAdd) {
-                    playlistTarget = track
-                },
                 ContextMenuAction(
-                    if (track.isFavorite) "Remove favorite" else "Favorite",
-                    if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                ) {
-                    viewModel.toggleFavorite(track)
-                },
+                    label = "Play next",
+                    icon = Icons.Default.PlayArrow,
+                    onClick = { viewModel.playTrack(track, listOf(track)) },
+                ),
+                ContextMenuAction(
+                    label = "Add to playlist",
+                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                    onClick = { playlistTarget = track },
+                ),
+                ContextMenuAction(
+                    label = if (track.isFavorite) "Remove favourite" else "Favourite",
+                    icon = if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    onClick = { viewModel.toggleFavorite(track) },
+                ),
             ),
         )
     }
@@ -256,16 +285,81 @@ fun LibraryScreen(
     }
 }
 
+// ─── Header ───────────────────────────────────────────────────────────────────
+
 @Composable
-private fun ScanProgressBar(scanStatus: ScanProgress) {
+private fun LibraryHeader(
+    hasPermission: Boolean,
+    isScanning: Boolean,
+    onStats: () -> Unit,
+    onSettings: () -> Unit,
+    onScan: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "LIBRARY",
+            style = SylphyType.DisplayLarge,
+            color = FgPrimary,
+            modifier = Modifier.weight(1f),
+        )
+
+        IconButton(
+            onClick = onStats,
+            modifier = Modifier.size(Layout.transportTapTarget),
+        ) {
+            Icon(
+                imageVector = Icons.Default.QueryStats,
+                contentDescription = "Listening stats",
+                tint = FgMuted,
+                modifier = Modifier.size(Layout.transportIconSize),
+            )
+        }
+
+        IconButton(
+            onClick = onSettings,
+            modifier = Modifier.size(Layout.transportTapTarget),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Settings",
+                tint = FgMuted,
+                modifier = Modifier.size(Layout.transportIconSize),
+            )
+        }
+
+        Spacer(Modifier.width(Spacing.xs))
+
+        SylphyButton(
+            text = when {
+                isScanning      -> "Scanning…"
+                hasPermission   -> "Scan"
+                else            -> "Allow"
+            },
+            variant = ButtonVariant.Outline,
+            onClick = onScan,
+        )
+    }
+}
+
+// ─── Scan progress bar ────────────────────────────────────────────────────────
+
+@Composable
+private fun ScanProgressBar(
+    scanStatus: ScanProgress,
+    modifier: Modifier = Modifier,
+) {
     val scanning = scanStatus as? ScanProgress.Scanning
     AnimatedVisibility(
         visible = scanning != null,
         enter = fadeIn(tween(Duration.Normal)),
-        exit = fadeOut(tween(Duration.Slow))
+        exit = fadeOut(tween(Duration.Slow)),
     ) {
         scanning?.let {
-            Column {
+            Column(modifier = modifier) {
                 Spacer(Modifier.height(Spacing.sm))
                 LinearProgressIndicator(
                     progress = { it.progress },
@@ -277,65 +371,17 @@ private fun ScanProgressBar(scanStatus: ScanProgress) {
                     trackColor = FgGhost,
                 )
                 Spacer(Modifier.height(Spacing.xs))
-                Text("SCANNING ${it.found} TRACKS · ${(it.progress * 100).toInt()}%", style = SylphyType.CodeSmall, color = FgMuted)
-            }
-        }
-    }
-}
-
-@Composable
-private fun LibrarySubTabs(selected: LibraryTab, onSelect: (LibraryTab) -> Unit) {
-    val tabs = LibraryTab.entries
-    val density = LocalDensity.current
-    val underlineOffset = remember { Animatable(0f) }
-
-    BoxWithConstraints(Modifier.padding(top = Spacing.lg, bottom = Spacing.md)) {
-        val tabWidth = maxWidth / tabs.size
-        val tabWidthPx = with(density) { tabWidth.toPx() }
-
-        LaunchedEffect(selected, tabWidthPx) {
-            underlineOffset.animateTo(
-                targetValue = selected.ordinal * tabWidthPx,
-                animationSpec = tween(Duration.Slow, easing = SylphyEasing.Standard),
-            )
-        }
-
-        Column {
-            Row(Modifier.fillMaxWidth()) {
-                tabs.forEach { tab ->
-                    val active = tab == selected
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(40.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = { onSelect(tab) }
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = tab.name.uppercase(), 
-                            style = SylphyType.CodeSmall, 
-                            color = if (active) FgPrimary else FgMuted,
-                            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-            }
-            Box(Modifier.fillMaxWidth().height(1.dp).background(FgGhost)) {
-                Box(
-                    Modifier
-                        .offset { IntOffset(underlineOffset.value.roundToInt(), 0) }
-                        .width(tabWidth)
-                        .height(1.dp)
-                        .background(FgPrimary),
+                Text(
+                    text = "SCANNING ${it.found} TRACKS · ${(it.progress * 100).toInt()}%",
+                    style = SylphyType.CodeSmall,
+                    color = FgMuted,
                 )
             }
         }
     }
 }
+
+// ─── Songs tab ────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -345,95 +391,214 @@ private fun SongsTab(
     onTrackClick: (Track) -> Unit,
     onTrackLongClick: (Track) -> Unit,
 ) {
+    // Group alphabetically; non-letter first chars bucket into "#"
     val sectioned = remember(tracks) {
-        tracks.groupBy { it.title.firstOrNull()?.uppercaseChar()?.takeIf { c -> c.isLetter() }?.toString() ?: "#" }
-            .toSortedMap()
+        tracks
+            .groupBy {
+                it.title
+                    .firstOrNull()
+                    ?.uppercaseChar()
+                    ?.takeIf { c -> c.isLetter() }
+                    ?.toString() ?: "#"
+            }
+            .toSortedMap(compareBy { if (it == "#") "\u0000" else it })
     }
+
     LazyColumn(modifier = Modifier.fillMaxSize()) {
+        // Recently played horizontal strip — sticky so it stays visible while
+        // the user scrolls down, then scrolls away with the list
         if (recentlyPlayed.isNotEmpty()) {
-            stickyHeader(key = "recent") {
-                RecentlyPlayedStrip(recentlyPlayed, onTrackClick)
+            stickyHeader(key = "recent_header") {
+                RecentlyPlayedStrip(
+                    tracks = recentlyPlayed,
+                    onTrackClick = onTrackClick,
+                )
             }
         }
+
         sectioned.forEach { (letter, sectionTracks) ->
-            stickyHeader(key = "header_$letter") { SectionHeader(letter) }
+            stickyHeader(key = "header_$letter") {
+                SectionHeader(title = letter)
+            }
             items(sectionTracks, key = { it.id }) { track ->
-                TrackRow(track, onTrackClick = onTrackClick, onTrackLongClick = onTrackLongClick)
+                TrackRow(
+                    track = track,
+                    onTrackClick = onTrackClick,
+                    onTrackLongClick = onTrackLongClick,
+                )
             }
         }
     }
 }
 
+// ─── Recently played strip ────────────────────────────────────────────────────
+
 @Composable
-private fun RecentlyPlayedStrip(tracks: List<Track>, onTrackClick: (Track) -> Unit) {
-    Column(Modifier.background(BgBase).padding(bottom = Spacing.sm)) {
-        Text("RECENT", style = SylphyType.CodeSmall, color = FgMuted, modifier = Modifier.padding(vertical = Spacing.xs))
+private fun RecentlyPlayedStrip(
+    tracks: List<Track>,
+    onTrackClick: (Track) -> Unit,
+) {
+    // Background matches BgBase so the sticky header blends with the list
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(BgBase)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+    ) {
+        Text(
+            text = "RECENT",
+            style = SylphyType.CodeSmall,
+            color = FgMuted,
+            modifier = Modifier.padding(bottom = Spacing.sm),
+        )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             items(tracks, key = { it.id }) { track ->
-                Column(
-                    modifier = Modifier.width(112.dp).clickable { onTrackClick(track) },
-                ) {
-                    AlbumArtwork(track.artworkPath, size = 96.dp)
-                    Spacer(Modifier.height(Spacing.sm))
-                    Text(track.title, style = SylphyType.CodeSmall, color = FgPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(track.artist, style = SylphyType.Caption, color = FgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
+                RecentCard(track = track, onClick = { onTrackClick(track) })
             }
         }
     }
 }
 
 @Composable
-private fun AlbumsTab(albums: List<Album>, onAlbumClick: (Album) -> Unit) {
+private fun RecentCard(track: Track, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .width(96.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
+    ) {
+        // AlbumArtwork handles fallback + border + corner — no wrapping needed
+        AlbumArtwork(
+            artworkPath = track.artworkPath,
+            size = 96.dp,
+        )
+        Spacer(Modifier.height(Spacing.xs))
+        Text(
+            text = track.title,
+            style = SylphyType.CodeSmall,
+            color = FgPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = track.artist,
+            style = SylphyType.Caption,
+            color = FgMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+// ─── Albums tab ───────────────────────────────────────────────────────────────
+
+@Composable
+private fun AlbumsTab(
+    albums: List<Album>,
+    onAlbumClick: (Album) -> Unit,
+) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(Layout.albumGridColumns),
-        contentPadding = PaddingValues(vertical = Spacing.sm),
+        contentPadding = PaddingValues(
+            horizontal = Spacing.md,
+            vertical = Spacing.sm,
+        ),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
         modifier = Modifier.fillMaxSize(),
     ) {
-        items(albums, key = { it.id }) { album -> AlbumCard(album, onAlbumClick) }
+        items(albums, key = { it.id }) { album ->
+            AlbumCard(album = album, onClick = onAlbumClick)
+        }
     }
 }
 
 @Composable
 private fun AlbumCard(album: Album, onClick: (Album) -> Unit) {
-    Column(Modifier.clickable { onClick(album) }) {
-        AlbumArtwork(album.artworkPath, modifier = Modifier.fillMaxWidth().aspectRatio(1f), size = Dp.Unspecified)
-        Spacer(Modifier.height(Spacing.sm))
-        Text(album.title, style = SylphyType.Code, color = FgPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(album.artist, style = SylphyType.BodySmall, color = FgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Column(
+        modifier = Modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = { onClick(album) },
+        ),
+    ) {
+        // size = Dp.Unspecified → AlbumArtwork uses the modifier for sizing
+        AlbumArtwork(
+            artworkPath = album.artworkPath,
+            size = Dp.Unspecified,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f),
+        )
+        Spacer(Modifier.height(Spacing.xs))
+        Text(
+            text = album.title,
+            style = SylphyType.Code,
+            color = FgPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = album.artist,
+            style = SylphyType.BodySmall,
+            color = FgMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
+// ─── Artists tab ──────────────────────────────────────────────────────────────
+
 @Composable
-private fun ArtistsTab(artists: List<Artist>, onArtistClick: (Artist) -> Unit) {
+private fun ArtistsTab(
+    artists: List<Artist>,
+    onArtistClick: (Artist) -> Unit,
+) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(artists, key = { it.id }) { artist ->
             ListEntityRow(
                 title = artist.name,
                 subtitle = "${artist.albumCount} albums · ${artist.trackCount.toTrackCountLabel()}",
+                leading = null,
                 onClick = { onArtistClick(artist) },
             )
         }
     }
 }
 
+// ─── Playlists tab ────────────────────────────────────────────────────────────
+
 @Composable
-private fun PlaylistsTab(playlists: List<Playlist>, onCreate: () -> Unit, onPlaylistClick: (Playlist) -> Unit) {
+private fun PlaylistsTab(
+    playlists: List<Playlist>,
+    onCreate: () -> Unit,
+    onPlaylistClick: (Playlist) -> Unit,
+) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item {
-            ListEntityRow("Create playlist", "New custom queue", onCreate, leading = Icons.Default.Add)
+        item(key = "create_playlist") {
+            ListEntityRow(
+                title = "Create playlist",
+                subtitle = "New custom queue",
+                leading = Icons.Default.Add,
+                onClick = onCreate,
+            )
         }
         items(playlists, key = { it.id }) { playlist ->
             ListEntityRow(
                 title = playlist.name,
                 subtitle = "${playlist.trackCount.toTrackCountLabel()} · ${playlist.durationMs.toHhMm()}",
+                leading = null,
                 onClick = { onPlaylistClick(playlist) },
             )
         }
     }
 }
+
+// ─── Search results ───────────────────────────────────────────────────────────
 
 @Composable
 private fun SearchResultsList(
@@ -443,28 +608,51 @@ private fun SearchResultsList(
     onAlbumClick: (Album) -> Unit,
     onArtistClick: (Artist) -> Unit,
 ) {
-    LazyColumn(Modifier.fillMaxSize()) {
-        if (results.tracks.isNotEmpty()) {
-            item(key = "songs_header") { SectionHeader("SONGS") }
-            items(results.tracks, key = { it.id }) { TrackRow(it, onTrackClick, onTrackLongClick) }
-        }
-        if (results.albums.isNotEmpty()) {
-            item(key = "albums_header") { SectionHeader("ALBUMS") }
-            items(results.albums, key = { it.id }) { album ->
-                ListEntityRow(album.title, album.artist, { onAlbumClick(album) })
-            }
-        }
-        if (results.artists.isNotEmpty()) {
-            item(key = "artists_header") { SectionHeader("ARTISTS") }
-            items(results.artists, key = { it.id }) { artist ->
-                ListEntityRow(artist.name, artist.trackCount.toTrackCountLabel(), { onArtistClick(artist) })
-            }
-        }
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
         if (results.tracks.isEmpty() && results.albums.isEmpty() && results.artists.isEmpty()) {
-            item(key = "empty_search") { SectionHeader("NO RESULTS") }
+            item(key = "no_results") {
+                SectionHeader(title = "NO RESULTS")
+            }
+        }
+
+        if (results.tracks.isNotEmpty()) {
+            item(key = "songs_header") { SectionHeader(title = "SONGS") }
+            items(results.tracks, key = { it.id }) { track ->
+                TrackRow(
+                    track = track,
+                    onTrackClick = onTrackClick,
+                    onTrackLongClick = onTrackLongClick,
+                )
+            }
+        }
+
+        if (results.albums.isNotEmpty()) {
+            item(key = "albums_header") { SectionHeader(title = "ALBUMS") }
+            items(results.albums, key = { it.id }) { album ->
+                ListEntityRow(
+                    title = album.title,
+                    subtitle = album.artist,
+                    leading = null,
+                    onClick = { onAlbumClick(album) },
+                )
+            }
+        }
+
+        if (results.artists.isNotEmpty()) {
+            item(key = "artists_header") { SectionHeader(title = "ARTISTS") }
+            items(results.artists, key = { it.id }) { artist ->
+                ListEntityRow(
+                    title = artist.name,
+                    subtitle = artist.trackCount.toTrackCountLabel(),
+                    leading = null,
+                    onClick = { onArtistClick(artist) },
+                )
+            }
         }
     }
 }
+
+// ─── Track row ────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -475,12 +663,9 @@ internal fun TrackRow(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val scale by androidx.compose.animation.core.animateFloatAsState(
+    val scale by animateFloatAsState(
         targetValue = if (pressed) 0.98f else 1f,
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = 1f,
-            stiffness = 800f,
-        ),
+        animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
         label = "track_row_scale",
     )
     val haptic = LocalHapticFeedback.current
@@ -488,7 +673,8 @@ internal fun TrackRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp)
+            // Use the Layout constant — was hardcoded to 72dp in the original
+            .height(Layout.trackRowHeight)
             .scale(scale)
             .combinedClickable(
                 interactionSource = interactionSource,
@@ -499,21 +685,24 @@ internal fun TrackRow(
                 },
                 onLongClick = { onTrackLongClick(track) },
             )
-            .padding(vertical = Spacing.sm, horizontal = Spacing.xs),
+            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AlbumArtwork(track.artworkPath, size = 48.dp)
+        AlbumArtwork(
+            artworkPath = track.artworkPath,
+            size = Layout.albumArtSizeSm,
+        )
         Spacer(Modifier.width(Spacing.md))
-        Column(Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                track.title,
+                text = track.title,
                 style = SylphyType.Code,
                 color = FgPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                track.artist,
+                text = track.artist,
                 style = SylphyType.BodySmall,
                 color = FgMuted,
                 maxLines = 1,
@@ -521,14 +710,22 @@ internal fun TrackRow(
             )
         }
         Text(
-            track.durationMs.toMmSs(),
+            text = track.durationMs.toMmSs(),
             style = SylphyType.CodeSmall,
             color = FgGhost,
             modifier = Modifier.padding(start = Spacing.sm),
         )
     }
-    SylphyDivider()
+
+    // Inset divider — starts after the artwork column to match the design
+    SylphyDivider(
+        modifier = Modifier.padding(
+            start = Spacing.md + Layout.albumArtSizeSm + Spacing.md,
+        ),
+    )
 }
+
+// ─── Section header ───────────────────────────────────────────────────────────
 
 @Composable
 internal fun SectionHeader(title: String) {
@@ -536,42 +733,93 @@ internal fun SectionHeader(title: String) {
         modifier = Modifier
             .fillMaxWidth()
             .height(Layout.sectionHeaderHeight)
-            .background(BgBase),
+            .background(BgBase)
+            // Horizontal padding was missing in the original — text started at x=0
+            .padding(horizontal = Spacing.md),
         contentAlignment = Alignment.CenterStart,
     ) {
-        Text(title, style = SylphyType.CodeSmall, color = FgMuted)
+        Text(
+            text = title,
+            style = SylphyType.CodeSmall,
+            color = FgMuted,
+        )
     }
 }
 
+// ─── Generic entity row (Artists, Playlists, Albums in search) ────────────────
+
 @Composable
-private fun ListEntityRow(title: String, subtitle: String, onClick: () -> Unit, leading: androidx.compose.ui.graphics.vector.ImageVector? = null) {
+private fun ListEntityRow(
+    title: String,
+    subtitle: String,
+    leading: ImageVector?,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(Layout.trackRowHeight)
-            .clickable { onClick() }
-            .padding(vertical = Spacing.sm),
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Leading icon or first-letter avatar
         Box(
             modifier = Modifier
                 .size(Layout.albumArtSizeSm)
                 .clip(ContainerCorner)
                 .border(Layout.borderThin, BorderDefault, ContainerCorner)
-                .background(if (leading == null) BgElevated else BgSunken),
+                .background(if (leading != null) BgSunken else BgElevated),
             contentAlignment = Alignment.Center,
         ) {
-            if (leading != null) Icon(leading, contentDescription = null, tint = FgPrimary)
-            else Text(title.take(1).uppercase(), style = SylphyType.Display, color = FgSubtle)
+            if (leading != null) {
+                Icon(
+                    imageVector = leading,
+                    contentDescription = null,
+                    tint = FgPrimary,
+                    modifier = Modifier.size(Layout.transportIconSize),
+                )
+            } else {
+                Text(
+                    text = title.take(1).uppercase(),
+                    style = SylphyType.Display,
+                    color = FgSubtle,
+                )
+            }
         }
+
         Spacer(Modifier.width(Spacing.md))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = SylphyType.Code, color = FgPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(subtitle, style = SylphyType.BodySmall, color = FgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = SylphyType.Code,
+                color = FgPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                style = SylphyType.BodySmall,
+                color = FgMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
-    SylphyDivider()
+
+    SylphyDivider(
+        modifier = Modifier.padding(
+            start = Spacing.md + Layout.albumArtSizeSm + Spacing.md,
+        ),
+    )
 }
+
+// ─── Playlist picker dialog ───────────────────────────────────────────────────
 
 @Composable
 private fun PlaylistPickerDialog(
@@ -583,29 +831,120 @@ private fun PlaylistPickerDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = BgElevated,
-        title = { Text("Add to playlist", style = SylphyType.Heading, color = FgPrimary) },
+        title = {
+            Text(
+                text = "Add to playlist",
+                style = SylphyType.Heading,
+                color = FgPrimary,
+            )
+        },
         text = {
-            Column {
-                Text("Create playlist", style = SylphyType.Body, color = FgPrimary, modifier = Modifier.fillMaxWidth().clickable(onClick = onCreate).padding(Spacing.md))
-                playlists.forEach { playlist ->
-                    Text(playlist.name, style = SylphyType.Body, color = FgPrimary, modifier = Modifier.fillMaxWidth().clickable { onPick(playlist) }.padding(Spacing.md))
+            LazyColumn {
+                item(key = "create_new") {
+                    Text(
+                        text = "Create new playlist",
+                        style = SylphyType.Body,
+                        color = FgPrimary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onCreate)
+                            .padding(vertical = Spacing.sm),
+                    )
+                    SylphyDivider()
+                }
+                items(playlists, key = { it.id }) { playlist ->
+                    Text(
+                        text = playlist.name,
+                        style = SylphyType.Body,
+                        color = FgPrimary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(playlist) }
+                            .padding(vertical = Spacing.sm),
+                    )
                 }
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = FgPrimary) } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = "Cancel", style = SylphyType.Body, color = FgMuted)
+            }
+        },
     )
 }
 
+// ─── Create playlist dialog ───────────────────────────────────────────────────
+
 @Composable
-private fun CreatePlaylistDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+private fun CreatePlaylistDialog(
+    onDismiss: () -> Unit,
+    onCreate: (String) -> Unit,
+) {
     var name by remember { mutableStateOf("") }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = BgElevated,
-        title = { Text("Create playlist", style = SylphyType.Heading, color = FgPrimary) },
-        text = { TextField(value = name, onValueChange = { name = it }, singleLine = true) },
-        confirmButton = { TextButton(onClick = { onCreate(name) }) { Text("Create", color = FgPrimary) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = FgPrimary) } },
+        title = {
+            Text(
+                text = "Create playlist",
+                style = SylphyType.Heading,
+                color = FgPrimary,
+            )
+        },
+        text = {
+            // Styled text input — replaces raw Material3 TextField which
+            // ignores the app theme and renders with wrong colors + shape
+            BasicTextField(
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                textStyle = SylphyType.Body.copy(color = FgPrimary),
+                cursorBrush = SolidColor(FgPrimary),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (name.isNotBlank()) onCreate(name.trim())
+                }),
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .clip(ContainerCorner)
+                            .background(BgSunken)
+                            .border(Layout.borderThin, BorderDefault, ContainerCorner)
+                            .padding(horizontal = Spacing.md),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        if (name.isEmpty()) {
+                            Text(
+                                text = "Playlist name",
+                                style = SylphyType.Body,
+                                color = FgMuted,
+                            )
+                        }
+                        innerTextField()
+                    }
+                },
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (name.isNotBlank()) onCreate(name.trim()) },
+                enabled = name.isNotBlank(),
+            ) {
+                Text(
+                    text = "Create",
+                    style = SylphyType.Body,
+                    color = if (name.isNotBlank()) FgPrimary else FgSubtle,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = "Cancel", style = SylphyType.Body, color = FgMuted)
+            }
+        },
     )
 }

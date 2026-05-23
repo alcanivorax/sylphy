@@ -17,7 +17,19 @@ import javax.inject.Inject
 data class QueueUiState(
     val tracks: List<Track> = emptyList(),
     val activeIndex: Int = -1,
-)
+) {
+    /** The currently playing track, or null if nothing is loaded. */
+    val nowPlaying: Track? get() = tracks.getOrNull(activeIndex)
+
+    /** All tracks after the active index. */
+    val upNext: List<Track> get() = if (activeIndex >= 0) tracks.drop(activeIndex + 1) else tracks
+
+    /** Number of tracks still to be played (excluding the active one). */
+    val remainingCount: Int get() = upNext.size
+
+    /** Sum of durations of all up-next tracks in milliseconds. */
+    val upNextDurationMs: Long get() = upNext.sumOf { it.durationMs }
+}
 
 @HiltViewModel
 class QueueViewModel @Inject constructor(
@@ -29,13 +41,15 @@ class QueueViewModel @Inject constructor(
     val uiState: StateFlow<QueueUiState> = _uiState.asStateFlow()
 
     private val listener = object : Player.Listener {
-        override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
-            refreshQueue()
-        }
+        override fun onTimelineChanged(
+            timeline: androidx.media3.common.Timeline,
+            reason: Int,
+        ) { refreshQueue() }
 
-        override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
-            refreshQueue()
-        }
+        override fun onMediaItemTransition(
+            mediaItem: androidx.media3.common.MediaItem?,
+            reason: Int,
+        ) { refreshQueue() }
     }
 
     init {
@@ -52,7 +66,9 @@ class QueueViewModel @Inject constructor(
     }
 
     fun removeAt(index: Int) {
-        if (index in 0 until player.mediaItemCount && index != player.currentMediaItemIndex) {
+        if (index in 0 until player.mediaItemCount &&
+            index != player.currentMediaItemIndex
+        ) {
             player.removeMediaItem(index)
             refreshQueue()
         }
@@ -63,14 +79,28 @@ class QueueViewModel @Inject constructor(
         if (fromIndex !in 0 until player.mediaItemCount) return
         if (toIndex !in 0 until player.mediaItemCount) return
         if (fromIndex == player.currentMediaItemIndex) return
-
         player.moveMediaItem(fromIndex, toIndex)
+        refreshQueue()
+    }
+
+    /**
+     * Removes every track after the currently playing item.
+     * The active track is preserved. No-op if there is no active track.
+     */
+    fun clearUpNext() {
+        val active = player.currentMediaItemIndex
+        if (active < 0) return
+        for (i in player.mediaItemCount - 1 downTo active + 1) {
+            player.removeMediaItem(i)
+        }
         refreshQueue()
     }
 
     private fun refreshQueue() {
         val ids = (0 until player.mediaItemCount)
-            .mapNotNull { index -> player.getMediaItemAt(index).mediaId.takeIf { it.isNotBlank() } }
+            .mapNotNull { i ->
+                player.getMediaItemAt(i).mediaId.takeIf { it.isNotBlank() }
+            }
         val activeIndex = player.currentMediaItemIndex
 
         viewModelScope.launch {

@@ -120,6 +120,9 @@ object Layout {
     /** Fixed height of a single item in the draggable queue list. */
     val queueItemHeight = 64.dp
 
+    /** Left inset for queue row dividers — aligns with text column start. */
+    val queueDividerInset = albumArtSizeSm + Spacing.md + Spacing.sm  // 48 + 16 + 8 = 72dp
+
     // ── Border Weights ────────────────────────────────────────────────────────
     // Border WEIGHT carries semantic meaning — do not mix these arbitrarily.
     //
