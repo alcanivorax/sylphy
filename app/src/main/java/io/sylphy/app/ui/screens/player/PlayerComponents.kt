@@ -1,10 +1,7 @@
 package io.sylphy.app.ui.screens.player
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -80,6 +77,7 @@ import io.sylphy.app.R
 import io.sylphy.app.data.model.RepeatMode
 import io.sylphy.app.data.model.ThemeMode
 import io.sylphy.app.data.model.Track
+import io.sylphy.app.ui.components.player.rememberPremiumDiscSpinState
 import io.sylphy.app.ui.theme.DmSans
 import io.sylphy.app.ui.theme.PlayerChromeColors
 import io.sylphy.app.ui.theme.PlayerTheme
@@ -154,80 +152,101 @@ fun VinylArtwork(
     val discSize = 284.dp
     val artSize  = 172.dp
     val spindleSize = 14.dp
-
-    val rotation = remember { Animatable(0f) }
-    LaunchedEffect(isPlaying) {
-        if (isPlaying) {
-            rotation.animateTo(
-                targetValue = rotation.value + 3600f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(
-                        durationMillis = 120_000,
-                        easing = LinearEasing
-                    ),
-                    repeatMode = androidx.compose.animation.core.RepeatMode.Restart
-                )
-            )
-        } else {
-            rotation.stop()
-        }
-    }
+    val spinState = rememberPremiumDiscSpinState(isPlaying = isPlaying)
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .size(discSize)
-            .graphicsLayer { rotationZ = rotation.value }
-            .clip(CircleShape)
-            .background(colors.discOuter)
-            .border(1.dp, colors.border2, CircleShape)
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val center = Offset(size.width / 2f, size.height / 2f)
-            val maxRadius = size.minDimension / 2f
-            var r = 30.dp.toPx()
-            while (r < maxRadius) {
+            .drawBehind {
                 drawCircle(
-                    color = colors.groove,
-                    radius = r,
-                    center = center,
-                    style = Stroke(width = 1.dp.toPx())
+                    color = colors.fg.copy(alpha = 0.035f),
+                    radius = size.minDimension * 0.51f,
+                    center = Offset(size.width / 2f, size.height / 2f),
                 )
-                r += 5.dp.toPx()
+                drawCircle(
+                    color = colors.bg.copy(alpha = 0.55f),
+                    radius = size.minDimension * 0.5f,
+                    center = Offset(size.width / 2f, size.height / 2f + 8.dp.toPx()),
+                )
             }
-        }
-
+    ) {
         Box(
+            contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(artSize)
-                .graphicsLayer { rotationZ = -rotation.value }
+                .fillMaxSize()
+                .graphicsLayer {
+                    rotationZ = spinState.rotationDegrees
+                }
                 .clip(CircleShape)
-                .border(
-                    width = 3.dp,
-                    color = colors.discOuter,
-                    shape = CircleShape
-                )
+                .background(colors.discOuter)
+                .border(1.dp, colors.border2, CircleShape),
         ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(artworkUri)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = "Album art",
-                contentScale = ContentScale.Crop,
-                error = painterResource(R.drawable.ic_sylphy_background), // placeholder
-                modifier = Modifier.fillMaxSize().clip(CircleShape)
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val center = Offset(size.width / 2f, size.height / 2f)
+                val maxRadius = size.minDimension / 2f
+                var r = 30.dp.toPx()
+                while (r < maxRadius) {
+                    drawCircle(
+                        color = colors.groove,
+                        radius = r,
+                        center = center,
+                        style = Stroke(width = 1.dp.toPx())
+                    )
+                    r += 5.dp.toPx()
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(artSize)
+                    .clip(CircleShape)
+                    .border(
+                        width = 3.dp,
+                        color = colors.discOuter,
+                        shape = CircleShape
+                    )
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(artworkUri)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Album art",
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.drawable.ic_sylphy_background), // placeholder
+                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(spindleSize)
+                    .clip(CircleShape)
+                    .background(colors.bg)
+                    .border(2.dp, colors.border2, CircleShape)
             )
         }
 
-        Box(
-            modifier = Modifier
-                .size(spindleSize)
-                .graphicsLayer { rotationZ = -rotation.value }
-                .clip(CircleShape)
-                .background(colors.bg)
-                .border(2.dp, colors.border2, CircleShape)
-        )
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val radius = size.minDimension / 2f
+            drawCircle(
+                color = colors.fg.copy(alpha = 0.055f),
+                radius = radius,
+                center = center,
+                style = Stroke(width = 1.dp.toPx()),
+            )
+            drawArc(
+                color = colors.fg.copy(alpha = 0.07f),
+                startAngle = -52f,
+                sweepAngle = 72f,
+                useCenter = false,
+                topLeft = Offset.Zero,
+                size = size,
+                style = Stroke(width = 1.2.dp.toPx()),
+            )
+        }
     }
 }
 
