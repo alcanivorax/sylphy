@@ -6,6 +6,7 @@ import android.content.Context
 import android.database.Cursor
 import android.provider.MediaStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.sylphy.app.core.util.MetadataCleaner
 import io.sylphy.app.data.local.db.dao.TrackDao
 import io.sylphy.app.data.local.db.entity.TrackEntity
 import kotlinx.coroutines.Dispatchers
@@ -97,11 +98,15 @@ class MediaScanner @Inject constructor(
                     TrackEntity(
                         id          = mediaId.toString(),
                         contentUri  = uri,
-                        title       = it.getStringOrNull(titleCol)?.takeIf { t -> t.isNotBlank() }
-                                        ?: it.getStringOrNull(nameCol)?.takeIf { n -> n.isNotBlank() }
-                                        ?: "Unknown",
-                        artist      = it.getStringOrNull(artistCol)?.takeIf { a -> a != "<unknown>" }
-                                        ?: "Unknown Artist",
+                        title       = MetadataCleaner.cleanTitle(
+                            it.getStringOrNull(titleCol)?.takeIf { t -> t.isNotBlank() }
+                                ?: it.getStringOrNull(nameCol)?.takeIf { n -> n.isNotBlank() }
+                                ?: "Unknown"
+                        ),
+                        artist      = MetadataCleaner.cleanArtist(
+                            it.getStringOrNull(artistCol)?.takeIf { a -> a != "<unknown>" }
+                                ?: "Unknown Artist"
+                        ),
                         album       = it.getStringOrNull(albumCol)?.takeIf { a -> a != "<unknown>" }
                                         ?: "Unknown Album",
                         durationMs  = it.getLongOrNull(durationCol) ?: 0L,

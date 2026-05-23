@@ -609,11 +609,6 @@ private fun RecentCard(
                 onClick = onClick,
             ),
     ) {
-        ArtworkImage(
-            artworkPath = track.artworkPath,
-            colors = colors,
-            modifier = Modifier.size(108.dp),
-        )
         Text(
             text = track.title,
             fontFamily = DmSans,
@@ -724,11 +719,6 @@ private fun LibrarySongRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ArtworkImage(
-            artworkPath = track.artworkPath,
-            colors = colors,
-            modifier = Modifier.size(46.dp),
-        )
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = track.title,
@@ -942,13 +932,6 @@ private fun LibraryGridCard(
             onClick = onClick,
         ),
     ) {
-        ArtworkImage(
-            artworkPath = artworkPath,
-            colors = colors,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f),
-        )
         Text(
             text = title,
             fontFamily = DmSans,
@@ -1046,20 +1029,6 @@ private fun EntityRow(
             )
         }
     }
-}
-
-@Composable
-private fun ArtworkImage(
-    artworkPath: String?,
-    colors: LibraryChromeColors,
-    modifier: Modifier,
-) {
-    Box(
-        modifier = modifier
-            .clip(SmallShape)
-            .background(colors.surface2)
-            .border(1.dp, colors.border2, SmallShape),
-    )
 }
 
 @Composable

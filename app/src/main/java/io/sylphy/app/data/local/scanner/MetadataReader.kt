@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.sylphy.app.core.util.MetadataCleaner
 import io.sylphy.app.data.local.db.dao.TrackDao
 import io.sylphy.app.data.local.db.entity.TrackEntity
 import kotlinx.coroutines.Dispatchers
@@ -25,8 +26,12 @@ class MetadataReader @Inject constructor(
         runCatching {
             retriever.setDataSource(context, Uri.parse(entity.contentUri))
             entity.copy(
-                title       = retriever.extract(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: entity.title,
-                artist      = retriever.extract(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: entity.artist,
+                title       = MetadataCleaner.cleanTitle(
+                    retriever.extract(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: entity.title
+                ),
+                artist      = MetadataCleaner.cleanArtist(
+                    retriever.extract(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: entity.artist
+                ),
                 album       = retriever.extract(MediaMetadataRetriever.METADATA_KEY_ALBUM) ?: entity.album,
                 albumArtist = retriever.extract(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST) ?: entity.albumArtist,
                 genre       = retriever.extract(MediaMetadataRetriever.METADATA_KEY_GENRE) ?: entity.genre,

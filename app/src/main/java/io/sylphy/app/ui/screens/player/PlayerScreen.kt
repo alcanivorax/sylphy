@@ -135,13 +135,11 @@ fun PlayerScreen(
                         FadeUp(delayMillis = 250) {
                             ControlsRow(
                                 isPlaying = uiState.isPlaying,
-                                isShuffle = uiState.shuffleEnabled,
                                 repeatMode = uiState.repeatMode,
                                 colors = colors,
                                 onPlayPause = viewModel::playPause,
                                 onNext = viewModel::next,
                                 onPrevious = viewModel::previous,
-                                onShuffle = viewModel::toggleShuffle,
                                 onRepeat = viewModel::cycleRepeat,
                             )
                         }

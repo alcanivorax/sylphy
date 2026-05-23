@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,7 +61,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -111,8 +111,6 @@ fun QueueScreen(
                     colors = colors,
                     trackCount = uiState.tracks.size,
                     totalDurationMs = uiState.tracks.sumOf { it.durationMs },
-                    shuffleEnabled = uiState.shuffleEnabled,
-                    onShuffle = viewModel::toggleShuffle,
                     onAdd = {},
                 )
             }
@@ -162,8 +160,6 @@ private fun QueueHeader(
     colors: QueueChromeColors,
     trackCount: Int,
     totalDurationMs: Long,
-    shuffleEnabled: Boolean,
-    onShuffle: () -> Unit,
     onAdd: () -> Unit,
 ) {
     Row(
@@ -196,14 +192,6 @@ private fun QueueHeader(
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            IconButton(onClick = onShuffle, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_shuffle),
-                    contentDescription = "Shuffle",
-                    tint = if (shuffleEnabled) colors.accent else colors.muted2,
-                    modifier = Modifier.size(17.dp),
-                )
-            }
             IconButton(onClick = onAdd, modifier = Modifier.size(36.dp)) {
                 Icon(
                     imageVector = Icons.Filled.Add,
@@ -578,14 +566,6 @@ private fun QueueRowItem(
             letterSpacing = 0.4.sp,
             textAlign = TextAlign.End,
             modifier = Modifier.width(18.dp),
-        )
-
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(PanelShape)
-                .background(colors.surface2)
-                .border(1.dp, colors.border2, PanelShape),
         )
 
         Column(modifier = Modifier.weight(1f)) {

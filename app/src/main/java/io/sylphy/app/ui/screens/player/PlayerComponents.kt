@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -58,7 +59,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -324,13 +324,11 @@ fun Long.toTimestamp(): String {
 @Composable
 fun ControlsRow(
     isPlaying: Boolean,
-    isShuffle: Boolean,
     repeatMode: RepeatMode,
     colors: PlayerChromeColors,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
-    onShuffle: () -> Unit,
     onRepeat: () -> Unit,
 ) {
     Row(
@@ -338,19 +336,6 @@ fun ControlsRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ActiveDotIconButton(
-            active = isShuffle,
-            colors = colors,
-            onClick = onShuffle,
-            contentDescription = "Shuffle"
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_shuffle),
-                contentDescription = null,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-
         IconButton(onClick = onPrevious, modifier = Modifier.size(44.dp)) {
             Icon(
                 imageVector = Icons.Filled.SkipPrevious,
