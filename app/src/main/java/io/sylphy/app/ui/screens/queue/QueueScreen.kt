@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -74,7 +73,6 @@ import io.sylphy.app.data.model.ThemeMode
 import io.sylphy.app.data.model.Track
 import io.sylphy.app.ui.screens.player.GeneratedArtwork
 import io.sylphy.app.ui.screens.player.HidePlatformStatusBar
-import io.sylphy.app.ui.screens.player.MockStatusBar
 import io.sylphy.app.ui.theme.DmSans
 import io.sylphy.app.ui.theme.QueueChromeColors
 import io.sylphy.app.ui.theme.SpaceMono
@@ -110,7 +108,7 @@ fun QueueScreen(
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
-            MockStatusBar(color = colors.fg)
+            Spacer(Modifier.height(46.dp))
 
             FadeUp(delayMillis = 40) {
                 QueueHeader(

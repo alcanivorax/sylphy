@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -78,8 +77,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -161,6 +162,8 @@ fun LibraryScreen(
             .fillMaxSize()
             .background(colors.bg),
     ) {
+        Spacer(Modifier.height(46.dp))
+
         FadeUp(delayMillis = 40) {
             LibraryHeader(
                 colors = colors,
@@ -314,7 +317,6 @@ private fun LibraryHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding()
             .padding(start = 22.dp, end = 22.dp, top = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -633,7 +635,13 @@ private fun RecentCard(
                 .clip(SmallShape)
                 .background(colors.surface2)
                 .border(1.dp, colors.border2, SmallShape),
-        )
+        ) {
+            LibraryGeneratedArtwork(
+                seed = track.title,
+                colors = colors,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         Text(
             text = track.title,
             fontFamily = DmSans,
@@ -656,6 +664,124 @@ private fun RecentCard(
             modifier = Modifier.padding(top = 2.dp),
         )
     }
+}
+
+@Composable
+private fun LibraryGeneratedArtwork(
+    seed: String,
+    colors: LibraryChromeColors,
+    modifier: Modifier = Modifier,
+) {
+    val hash = remember(seed) { stableHash(seed) }
+    val stroke = colors.border2
+    val mark = colors.playIndicator.copy(alpha = 0.7f)
+
+    Canvas(modifier = modifier.background(colors.surface2)) {
+        val s = size.minDimension
+        val center = Offset(size.width / 2f, size.height / 2f)
+        when (hash % 5) {
+            0 -> {
+                val gap = (8 + (hash % 6) * 2).dp.toPx()
+                var x = -s
+                while (x < s * 2f) {
+                    drawLine(
+                        color = stroke.copy(alpha = 0.7f),
+                        start = Offset(x, 0f),
+                        end = Offset(x + s, s),
+                        strokeWidth = 1.dp.toPx(),
+                    )
+                    x += gap
+                }
+                val off = (hash % ((s / 2f).toInt().coerceAtLeast(1))).toFloat()
+                drawLine(
+                    color = mark,
+                    start = Offset(off, 0f),
+                    end = Offset(off + s, s),
+                    strokeWidth = 2.5.dp.toPx(),
+                )
+            }
+            1 -> {
+                val count = 3 + hash % 4
+                val step = s * 0.42f / count
+                for (i in 1..count) {
+                    drawCircle(
+                        color = stroke.copy(alpha = 0.3f + (i.toFloat() / count) * 0.5f),
+                        radius = step * i,
+                        center = center,
+                        style = Stroke(width = if (i == count) 2.dp.toPx() else 1.dp.toPx()),
+                    )
+                }
+                drawCircle(color = mark, radius = 3.dp.toPx(), center = center)
+            }
+            2 -> {
+                val cols = 5 + hash % 3
+                val gap = s / (cols + 1)
+                val rows = (s / gap).toInt().coerceAtLeast(1)
+                for (row in 1..rows) {
+                    for (col in 1..cols) {
+                        val rr = stableHash("$seed:${row * 31}:${col * 17}") % 3
+                        val alpha = when (rr) {
+                            0 -> 0.6f
+                            1 -> 0.25f
+                            else -> 0.1f
+                        }
+                        drawCircle(
+                            color = stroke.copy(alpha = alpha),
+                            radius = 1.5.dp.toPx(),
+                            center = Offset(gap * col, gap * row),
+                        )
+                    }
+                }
+                drawCircle(
+                    color = mark,
+                    radius = 3.5.dp.toPx(),
+                    center = Offset(gap * (1 + hash % cols), gap * (1 + (hash shr 4) % rows)),
+                )
+            }
+            3 -> {
+                val bars = 16 + hash % 8
+                val barWidth = (s - 12.dp.toPx()) / bars
+                for (i in 0 until bars) {
+                    val barHeight = 6.dp.toPx() + (stableHash("$seed:${i * 7}") % (s * 0.55f).toInt().coerceAtLeast(1))
+                    drawRect(
+                        color = stroke.copy(alpha = 0.25f + if (i % 3 == 0) 0.55f else 0.15f),
+                        topLeft = Offset(6.dp.toPx() + i * barWidth + barWidth * 0.1f, center.y - barHeight / 2f),
+                        size = Size(barWidth * 0.7f, barHeight),
+                    )
+                }
+                val hi = hash % bars
+                val hiHeight = 6.dp.toPx() + (stableHash("$seed:${hi * 7}") % (s * 0.55f).toInt().coerceAtLeast(1))
+                drawRect(
+                    color = mark,
+                    topLeft = Offset(6.dp.toPx() + hi * barWidth + barWidth * 0.1f, center.y - hiHeight / 2f),
+                    size = Size(barWidth * 0.7f, hiHeight),
+                )
+            }
+            else -> {
+                val count = 3 + hash % 4
+                val step = s / (count + 1)
+                for (i in 1..count) {
+                    val y = step * i
+                    val halfWidth = s * 0.35f
+                    val halfHeight = s * 0.09f
+                    val alpha = 0.15f + (i.toFloat() / count) * 0.55f
+                    drawLine(stroke.copy(alpha = alpha), Offset(center.x - halfWidth, y + halfHeight), Offset(center.x, y - halfHeight), 1.5.dp.toPx())
+                    drawLine(stroke.copy(alpha = alpha), Offset(center.x, y - halfHeight), Offset(center.x + halfWidth, y + halfHeight), 1.5.dp.toPx())
+                }
+                val y = step * (1 + hash % count)
+                val halfWidth = s * 0.35f
+                val halfHeight = s * 0.09f
+                drawLine(mark, Offset(center.x - halfWidth, y + halfHeight), Offset(center.x, y - halfHeight), 2.5.dp.toPx())
+                drawLine(mark, Offset(center.x, y - halfHeight), Offset(center.x + halfWidth, y + halfHeight), 2.5.dp.toPx())
+            }
+        }
+    }
+}
+
+private fun stableHash(value: String): Int {
+    var h = 5381
+    value.forEach { h = ((h shl 5) + h) xor it.code }
+    return kotlin.math.abs(h)
 }
 
 @Composable
@@ -802,7 +928,13 @@ private fun LibrarySongRow(
                 .clip(SmallShape)
                 .background(colors.surface2)
                 .border(1.dp, colors.border2, SmallShape),
-        )
+        ) {
+            LibraryGeneratedArtwork(
+                seed = track.title,
+                colors = colors,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = track.title,
@@ -1016,6 +1148,20 @@ private fun LibraryGridCard(
             onClick = onClick,
         ),
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(SmallShape)
+                .background(colors.surface2)
+                .border(1.dp, colors.border2, SmallShape),
+        ) {
+            LibraryGeneratedArtwork(
+                seed = title,
+                colors = colors,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         Text(
             text = title,
             fontFamily = DmSans,

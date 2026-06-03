@@ -24,11 +24,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,7 +36,6 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -62,6 +59,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -80,8 +79,8 @@ import io.sylphy.app.data.model.Track
 import io.sylphy.app.ui.components.player.rememberPremiumDiscSpinState
 import io.sylphy.app.ui.theme.DmSans
 import io.sylphy.app.ui.theme.PlayerChromeColors
-import io.sylphy.app.ui.theme.PlayerTheme
 import io.sylphy.app.ui.theme.SpaceMono
+import io.sylphy.app.ui.theme.libraryChromeColors
 
 @Composable
 fun BlurredArtBackground(
@@ -554,6 +553,7 @@ fun ControlsRow(
             Icon(
                 painter = painterResource(R.drawable.ic_shuffle),
                 contentDescription = null,
+                tint = if (shuffleEnabled) colors.accent else colors.fgDim,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -742,19 +742,19 @@ enum class BottomNavTab { LIBRARY, PLAYER, QUEUE }
 @Composable
 fun BottomNav(
     activeTab: BottomNavTab,
+    themeMode: ThemeMode,
     onLibrary: () -> Unit,
     onPlayer: () -> Unit,
     onQueue: () -> Unit,
 ) {
-    val borderColor = PlayerTheme.Border
+    val navColors = libraryChromeColors(themeMode)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(68.dp)
-            .navigationBarsPadding()
             .drawBehind {
                 drawLine(
-                    color = borderColor,
+                    color = navColors.border,
                     start = Offset(0f, 0f),
                     end = Offset(size.width, 0f),
                     strokeWidth = 1.dp.toPx()
@@ -762,10 +762,10 @@ fun BottomNav(
             }
     ) {
         listOf(
-            Triple(BottomNavTab.LIBRARY, "LIBRARY", Icons.Filled.LibraryMusic),
-            Triple(BottomNavTab.PLAYER,  "PLAYER",  Icons.Filled.PlayArrow),
-            Triple(BottomNavTab.QUEUE,   "QUEUE",   Icons.AutoMirrored.Filled.QueueMusic),
-        ).forEach { (tab, label, icon) ->
+            BottomNavTab.LIBRARY to "LIBRARY",
+            BottomNavTab.PLAYER to "PLAYER",
+            BottomNavTab.QUEUE to "QUEUE",
+        ).forEach { (tab, label) ->
             val isActive = tab == activeTab
             Box(
                 contentAlignment = Alignment.TopCenter,
@@ -789,7 +789,7 @@ fun BottomNav(
                             .width(32.dp)
                             .height(2.dp)
                             .clip(RoundedCornerShape(bottomStart = 2.dp, bottomEnd = 2.dp))
-                            .background(PlayerTheme.Red)
+                            .background(navColors.accent)
                     )
                 }
 
@@ -798,11 +798,10 @@ fun BottomNav(
                     verticalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxSize().padding(bottom = 8.dp)
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = label,
-                        tint = if (isActive) PlayerTheme.White else PlayerTheme.Muted,
-                        modifier = Modifier.size(18.dp)
+                    BottomNavGlyph(
+                        tab = tab,
+                        color = if (isActive) navColors.fg else navColors.muted2,
+                        modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -810,9 +809,55 @@ fun BottomNav(
                         fontFamily = SpaceMono,
                         fontSize = 8.sp,
                         fontWeight = FontWeight.Normal,
-                        color = if (isActive) PlayerTheme.White else PlayerTheme.Muted,
+                        color = if (isActive) navColors.fg else navColors.muted2,
                         letterSpacing = 1.62.sp
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BottomNavGlyph(
+    tab: BottomNavTab,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier = modifier) {
+        val sx = size.width / 24f
+        val sy = size.height / 24f
+        fun p(x: Float, y: Float) = Offset(x * sx, y * sy)
+        val stroke = Stroke(
+            width = 1.8.dp.toPx(),
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round,
+        )
+        when (tab) {
+            BottomNavTab.LIBRARY -> {
+                drawLine(color, p(6.5f, 17f), p(20f, 17f), strokeWidth = stroke.width, cap = StrokeCap.Round)
+                drawLine(color, p(6.5f, 2f), p(20f, 2f), strokeWidth = stroke.width, cap = StrokeCap.Round)
+                drawLine(color, p(20f, 2f), p(20f, 22f), strokeWidth = stroke.width, cap = StrokeCap.Round)
+                drawLine(color, p(6.5f, 2f), p(6.5f, 17f), strokeWidth = stroke.width, cap = StrokeCap.Round)
+                drawLine(color, p(6.5f, 22f), p(20f, 22f), strokeWidth = stroke.width, cap = StrokeCap.Round)
+                drawArc(
+                    color = color,
+                    startAngle = 180f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = p(4f, 17f),
+                    size = Size(5f * sx, 5f * sy),
+                    style = stroke,
+                )
+            }
+            BottomNavTab.PLAYER -> {
+                drawCircle(color = color, radius = 10f * sx, center = p(12f, 12f), style = stroke)
+                drawCircle(color = color, radius = 3f * sx, center = p(12f, 12f), style = stroke)
+            }
+            BottomNavTab.QUEUE -> {
+                listOf(6f, 12f, 18f).forEach { y ->
+                    drawLine(color, p(8f, y), p(21f, y), strokeWidth = stroke.width, cap = StrokeCap.Round)
+                    drawLine(color, p(3f, y), p(3.01f, y), strokeWidth = stroke.width, cap = StrokeCap.Round)
                 }
             }
         }

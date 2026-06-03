@@ -66,7 +66,7 @@ fun PlayerScreen(
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
-            MockStatusBar(color = colors.fg)
+            Spacer(Modifier.height(46.dp))
 
             TopNav(
                 colors = colors,

@@ -114,6 +114,7 @@ fun SylphyNavGraph(
                         PAGE_QUEUE -> BottomNavTab.QUEUE
                         else -> BottomNavTab.PLAYER
                     },
+                    themeMode = themeMode,
                     onLibrary = {
                         pagerPage = PAGE_LIBRARY
                         navController.navigate(Screen.Library.route) {
