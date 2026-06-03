@@ -82,6 +82,12 @@ kotlin {
     }
 }
 
+tasks.register("unitTestClasses") {
+    group = org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
+    description = "Compatibility task for tools that expect a JVM-style unitTestClasses task."
+    dependsOn("assembleUnitTest")
+}
+
 dependencies {
 
     // ── AndroidX Core ─────────────────────────────────────────────────────────

@@ -223,8 +223,13 @@ fun LibraryScreen(
                         recentlyPlayed = uiState.recentlyPlayed,
                         currentTrackId = uiState.currentTrackId,
                         isPlaying = uiState.isPlaying,
+                        hasPermission = hasMediaPermission,
                         onTrackClick = { viewModel.playTrack(it, uiState.tracks) },
                         onTrackLongClick = { contextMenuTrack = it },
+                        onScan = {
+                            if (hasMediaPermission) viewModel.scanLibrary()
+                            else permissionLauncher.launch(mediaPermission)
+                        },
                     )
                     LibraryTab.Albums -> AlbumsTab(
                         colors = colors,
@@ -541,19 +546,32 @@ private fun SongsTab(
     recentlyPlayed: List<Track>,
     currentTrackId: String?,
     isPlaying: Boolean,
+    hasPermission: Boolean,
     onTrackClick: (Track) -> Unit,
     onTrackLongClick: (Track) -> Unit,
+    onScan: () -> Unit,
 ) {
     val sectioned = remember(tracks) {
         tracks.groupBy {
             it.title.firstOrNull()?.uppercaseChar()?.takeIf { c -> c.isLetter() }?.toString() ?: "#"
         }.toSortedMap(compareBy { if (it == "#") "\u0000" else it })
     }
+    val recentTracks = if (recentlyPlayed.isNotEmpty()) recentlyPlayed.take(12) else tracks.take(12)
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        if (recentlyPlayed.isNotEmpty()) {
+        if (tracks.isEmpty()) {
+            item(key = "empty_library") {
+                EmptyLibraryState(
+                    colors = colors,
+                    hasPermission = hasPermission,
+                    onScan = onScan,
+                )
+            }
+        }
+
+        if (recentTracks.isNotEmpty()) {
             item(key = "recent") {
-                RecentSection(colors = colors, tracks = recentlyPlayed.take(12), onTrackClick = onTrackClick)
+                RecentSection(colors = colors, tracks = recentTracks, onTrackClick = onTrackClick)
                 Divider(colors = colors)
             }
         }
@@ -602,13 +620,20 @@ private fun RecentCard(
 ) {
     Column(
         modifier = Modifier
-            .width(108.dp)
+            .width(96.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick,
             ),
     ) {
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .clip(SmallShape)
+                .background(colors.surface2)
+                .border(1.dp, colors.border2, SmallShape),
+        )
         Text(
             text = track.title,
             fontFamily = DmSans,
@@ -629,6 +654,58 @@ private fun RecentCard(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 2.dp),
+        )
+    }
+}
+
+@Composable
+private fun EmptyLibraryState(
+    colors: LibraryChromeColors,
+    hasPermission: Boolean,
+    onScan: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp, vertical = 42.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = if (hasPermission) "NO TRACKS FOUND" else "AUDIO ACCESS NEEDED",
+            fontFamily = SpaceMono,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = colors.muted,
+            letterSpacing = 1.6.sp,
+        )
+        Text(
+            text = if (hasPermission) {
+                "Scan your device to build the library."
+            } else {
+                "Allow audio access so Sylphy can scan your music."
+            },
+            fontFamily = DmSans,
+            fontSize = 14.sp,
+            color = colors.muted2,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+        Text(
+            text = if (hasPermission) "SCAN" else "ALLOW",
+            fontFamily = SpaceMono,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            color = colors.fg,
+            letterSpacing = 1.sp,
+            modifier = Modifier
+                .padding(top = 18.dp)
+                .clip(SmallShape)
+                .border(1.dp, colors.border2, SmallShape)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onScan,
+                )
+                .padding(horizontal = 14.dp, vertical = 7.dp),
         )
     }
 }
@@ -719,6 +796,13 @@ private fun LibrarySongRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(SmallShape)
+                .background(colors.surface2)
+                .border(1.dp, colors.border2, SmallShape),
+        )
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = track.title,

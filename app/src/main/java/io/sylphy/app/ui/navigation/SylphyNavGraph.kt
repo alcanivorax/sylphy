@@ -39,12 +39,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.sylphy.app.data.model.ThemeMode
 import io.sylphy.app.ui.components.shared.SwipePager
-import io.sylphy.app.ui.components.shared.SylphyTabBar
-import io.sylphy.app.ui.screens.player.PlayerViewModel
 import io.sylphy.app.ui.screens.ambient.AmbientScreen
 import io.sylphy.app.ui.screens.library.AlbumDetailScreen
 import io.sylphy.app.ui.screens.library.ArtistDetailScreen
@@ -70,8 +66,6 @@ private val topLevelRoutes = listOf(
     Screen.Queue.route,
 )
 
-private val tabs = listOf("Library", "Player", "Queue")
-
 private const val PAGE_LIBRARY = 0
 private const val PAGE_PLAYER = 1
 private const val PAGE_QUEUE = 2
@@ -88,20 +82,10 @@ fun SylphyNavGraph(
 
     var pagerPage by remember { mutableIntStateOf(PAGE_PLAYER) }
 
-    val playerViewModel: PlayerViewModel = hiltViewModel()
-    val playerUiState by playerViewModel.uiState.collectAsStateWithLifecycle()
-    val hasActiveTrack = playerUiState.activeTrack != null
-
     LaunchedEffect(currentRoute) {
         val index = topLevelRoutes.indexOf(currentRoute)
         if (index >= 0 && index != pagerPage) {
             pagerPage = index
-        }
-    }
-
-    LaunchedEffect(hasActiveTrack, pagerPage) {
-        if (!hasActiveTrack && pagerPage == PAGE_PLAYER) {
-            pagerPage = PAGE_LIBRARY
         }
     }
 
@@ -179,13 +163,13 @@ fun SylphyNavGraph(
                     PAGE_LIBRARY -> LibraryScreen(navController, themeMode = themeMode)
                     PAGE_PLAYER -> PlayerScreen(navController, themeMode = themeMode)
                     PAGE_QUEUE -> QueueScreen(themeMode = themeMode)
-                    else -> PlayerScreen(navController, themeMode = themeMode)
+                    else -> LibraryScreen(navController, themeMode = themeMode)
                 }
             }
         } else {
             NavHost(
                 navController = navController,
-                startDestination = Screen.Player.route,
+                startDestination = Screen.Library.route,
                 modifier = Modifier
                     .padding(padding)
                     .background(if (isNothingOS) OLEDBlack else BgBase),
@@ -206,9 +190,9 @@ fun SylphyNavGraph(
                         slideOutHorizontally(tween(Duration.Normal, easing = SylphyEasing.Standard)) { it / 10 }
                 },
             ) {
+                composable(Screen.Library.route) { LibraryScreen(navController, themeMode = themeMode) }
                 composable(Screen.Player.route) { PlayerScreen(navController, themeMode = themeMode) }
                 composable(Screen.Queue.route) { QueueScreen(themeMode = themeMode) }
-                composable(Screen.Library.route) { LibraryScreen(navController, themeMode = themeMode) }
 
                 composable(
                     route = Screen.AlbumDetail.ROUTE,

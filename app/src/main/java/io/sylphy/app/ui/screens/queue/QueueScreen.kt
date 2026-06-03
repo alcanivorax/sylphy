@@ -72,6 +72,9 @@ import io.sylphy.app.R
 import io.sylphy.app.core.util.toMmSs
 import io.sylphy.app.data.model.ThemeMode
 import io.sylphy.app.data.model.Track
+import io.sylphy.app.ui.screens.player.GeneratedArtwork
+import io.sylphy.app.ui.screens.player.HidePlatformStatusBar
+import io.sylphy.app.ui.screens.player.MockStatusBar
 import io.sylphy.app.ui.theme.DmSans
 import io.sylphy.app.ui.theme.QueueChromeColors
 import io.sylphy.app.ui.theme.SpaceMono
@@ -90,6 +93,7 @@ fun QueueScreen(
     val colors = queueChromeColors(themeMode)
     val systemUiController = rememberSystemUiController()
     val darkIcons = colors.bg.luminance() > 0.5f
+    HidePlatformStatusBar()
 
     SideEffect {
         systemUiController.setSystemBarsColor(Color.Transparent, darkIcons = darkIcons)
@@ -106,11 +110,15 @@ fun QueueScreen(
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
+            MockStatusBar(color = colors.fg)
+
             FadeUp(delayMillis = 40) {
                 QueueHeader(
                     colors = colors,
                     trackCount = uiState.tracks.size,
                     totalDurationMs = uiState.tracks.sumOf { it.durationMs },
+                    shuffleEnabled = uiState.shuffleEnabled,
+                    onShuffle = viewModel::toggleShuffle,
                     onAdd = {},
                 )
             }
@@ -143,6 +151,7 @@ fun QueueScreen(
                     colors = colors,
                     upNext = uiState.upNext,
                     indexOffset = (uiState.activeIndex + 1).coerceAtLeast(0),
+                    themeMode = themeMode,
                     onPlay = viewModel::playAt,
                     onRemove = viewModel::removeAt,
                     onMove = viewModel::move,
@@ -160,12 +169,13 @@ private fun QueueHeader(
     colors: QueueChromeColors,
     trackCount: Int,
     totalDurationMs: Long,
+    shuffleEnabled: Boolean,
+    onShuffle: () -> Unit,
     onAdd: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding()
             .padding(start = 22.dp, end = 22.dp, top = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -192,6 +202,14 @@ private fun QueueHeader(
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            IconButton(onClick = onShuffle, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_shuffle),
+                    contentDescription = "Shuffle queue",
+                    tint = if (shuffleEnabled) colors.accent else colors.muted2,
+                    modifier = Modifier.size(17.dp),
+                )
+            }
             IconButton(onClick = onAdd, modifier = Modifier.size(36.dp)) {
                 Icon(
                     imageVector = Icons.Filled.Add,
@@ -233,7 +251,14 @@ private fun NowPlayingCard(
                     .clip(PanelShape)
                     .background(colors.surface2)
                     .border(1.dp, colors.border2, PanelShape),
-            )
+            ) {
+                GeneratedArtwork(
+                    seed = track.title,
+                    colors = io.sylphy.app.ui.theme.playerChromeColors(themeMode),
+                    themeMode = themeMode,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             NowPlayingEqBars(
                 color = colors.accent,
                 modifier = Modifier
@@ -433,6 +458,7 @@ private fun QueueList(
     colors: QueueChromeColors,
     upNext: List<Track>,
     indexOffset: Int,
+    themeMode: ThemeMode,
     onPlay: (Int) -> Unit,
     onRemove: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
@@ -461,6 +487,7 @@ private fun QueueList(
                 colors = colors,
                 track = track,
                 position = absoluteIndex + 1,
+                themeMode = themeMode,
                 showTopDivider = localIndex > 0,
                 isDragging = isDragging,
                 modifier = Modifier
@@ -506,6 +533,7 @@ private fun QueueRowItem(
     colors: QueueChromeColors,
     track: Track,
     position: Int,
+    themeMode: ThemeMode,
     showTopDivider: Boolean,
     isDragging: Boolean,
     modifier: Modifier = Modifier,
@@ -567,6 +595,21 @@ private fun QueueRowItem(
             textAlign = TextAlign.End,
             modifier = Modifier.width(18.dp),
         )
+
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(PanelShape)
+                .background(colors.surface2)
+                .border(1.dp, colors.border2, PanelShape),
+        ) {
+            GeneratedArtwork(
+                seed = track.title,
+                colors = io.sylphy.app.ui.theme.playerChromeColors(themeMode),
+                themeMode = themeMode,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
 
         Column(modifier = Modifier.weight(1f)) {
             Text(

@@ -3,7 +3,6 @@ package io.sylphy.app.ui.screens.player
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -32,8 +31,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import io.sylphy.app.data.model.ThemeMode
-import io.sylphy.app.ui.components.player.CDDisc
-import io.sylphy.app.ui.navigation.Screen
 import io.sylphy.app.ui.theme.FgMuted
 import io.sylphy.app.ui.theme.Layout
 import io.sylphy.app.ui.theme.Spacing
@@ -49,6 +46,7 @@ fun PlayerScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val track = uiState.activeTrack
     val colors = playerChromeColors(themeMode)
+    HidePlatformStatusBar()
 
     // Edge-to-edge: transparent status + nav bars
     val systemUiController = rememberSystemUiController()
@@ -63,16 +61,12 @@ fun PlayerScreen(
             .background(colors.bg)
     ) {
         if (track == null) {
-            EmptyPlayerState(
-                onOpenLibrary = { navController.navigate(Screen.Library.route) },
-            )
+            EmptyPlayerState()
             return@Box
         }
 
-        BlurredArtBackground(artworkUri = track.artworkPath, themeMode = themeMode, colors = colors)
-        GrainOverlay(colors = colors)
-
         Column(modifier = Modifier.fillMaxSize()) {
+            MockStatusBar(color = colors.fg)
 
             TopNav(
                 colors = colors,
@@ -92,19 +86,22 @@ fun PlayerScreen(
                         .fillMaxWidth(),
                 ) {
                     val compactHeight = maxHeight < 600.dp
-                    val topGap = if (compactHeight) 10.dp else 18.dp
-                    val infoGap = if (compactHeight) 20.dp else 24.dp
-                    val scrubberGap = if (compactHeight) 18.dp else 22.dp
-                    val controlsGap = if (compactHeight) 20.dp else 22.dp
+                    val discGap = if (compactHeight) 10.dp else 18.dp
+                    val infoGap = if (compactHeight) 16.dp else 24.dp
+                    val badgeGap = 8.dp
+                    val scrubberGap = if (compactHeight) 16.dp else 20.dp
+                    val controlsGap = if (compactHeight) 16.dp else 20.dp
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Spacer(Modifier.height(topGap))
+                        Spacer(Modifier.height(discGap))
 
                         FadeUp(delayMillis = 50) {
                             VinylArtwork(
                                 artworkUri = track.artworkPath,
                                 isPlaying = uiState.isPlaying,
                                 colors = colors,
+                                themeMode = themeMode,
+                                seed = track.title,
                             )
                         }
 
@@ -117,6 +114,12 @@ fun PlayerScreen(
                                 colors = colors,
                                 onFavouriteToggle = viewModel::toggleFavorite,
                             )
+                        }
+
+                        Spacer(Modifier.height(badgeGap))
+
+                        FadeUp(delayMillis = 150) {
+                            QualityBadgeRow(track = track, colors = colors)
                         }
 
                         Spacer(Modifier.height(scrubberGap))
@@ -135,16 +138,16 @@ fun PlayerScreen(
                         FadeUp(delayMillis = 250) {
                             ControlsRow(
                                 isPlaying = uiState.isPlaying,
+                                shuffleEnabled = uiState.shuffleEnabled,
                                 repeatMode = uiState.repeatMode,
                                 colors = colors,
+                                onShuffle = viewModel::toggleShuffle,
                                 onPlayPause = viewModel::playPause,
                                 onNext = viewModel::next,
                                 onPrevious = viewModel::previous,
                                 onRepeat = viewModel::cycleRepeat,
                             )
                         }
-
-                        Spacer(Modifier.height(controlsGap))
 
                         FadeUp(delayMillis = 300) {
                             SecondaryRow(
@@ -193,9 +196,7 @@ private fun FadeUp(
 }
 
 @Composable
-private fun EmptyPlayerState(
-    onOpenLibrary: () -> Unit,
-) {
+private fun EmptyPlayerState() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -203,20 +204,14 @@ private fun EmptyPlayerState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Box(
+        GeneratedArtwork(
+            seed = "Sylphy",
+            colors = playerChromeColors(ThemeMode.MONOCHROME_DARK),
+            themeMode = ThemeMode.MONOCHROME_DARK,
             modifier = Modifier
                 .size(Layout.albumArtSize)
-                .graphicsLayer {
-                    alpha = 0.15f
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            CDDisc(
-                artworkPath = null,
-                isPlaying = false,
-                discSize = Layout.albumArtSize,
-            )
-        }
+                .graphicsLayer { alpha = 0.15f },
+        )
 
         Spacer(Modifier.height(Spacing.xl))
 
@@ -229,12 +224,9 @@ private fun EmptyPlayerState(
         Spacer(Modifier.height(Spacing.sm))
 
         Text(
-            text = "Select music from Library",
+            text = "Queue a track to begin",
             style = SylphyType.Body,
             color = FgMuted.copy(alpha = 0.6f),
-            modifier = Modifier
-                .clickable(onClick = onOpenLibrary)
-                .padding(Spacing.xs),
         )
     }
 }
