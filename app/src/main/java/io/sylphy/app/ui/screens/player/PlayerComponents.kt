@@ -356,7 +356,7 @@ fun TrackInfoRow(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "${track.artist} · ${track.album}",
+                text = "${track.artist}",
                 fontFamily = SpaceMono,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Normal,
